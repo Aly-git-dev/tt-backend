@@ -13,7 +13,7 @@ spring:
           auth: true
           starttls.enable: true
   datasource:
-    url: jdbc:postgresql://http://148.204.142.20::5432/upiiz_platform
+    url: jdbc:postgresql://http://148.204.142.20:5432/upiiz_platform
     username: upiiz
     password: upiizpass
   jpa:
