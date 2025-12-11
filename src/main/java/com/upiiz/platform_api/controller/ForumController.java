@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/upiiz/public/v1/forums")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://148.204.142.20:3030")
 @Tag(
         name = "forum-controller",
         description = "Operaciones relacionadas con los foros (hilos, respuestas, recomendaciones y reportes)"
