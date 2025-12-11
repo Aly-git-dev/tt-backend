@@ -25,7 +25,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@upiiz.mx
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "8081:80"
+      - "3021:80"
     depends_on:
       - db
 
