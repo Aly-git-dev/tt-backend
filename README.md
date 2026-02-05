@@ -1,1 +1,0 @@
-# tt-web-platform
