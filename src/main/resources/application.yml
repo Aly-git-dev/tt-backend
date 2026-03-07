@@ -44,3 +44,8 @@ logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: INFO
+
+chat:
+  storage:
+    baseDir: ./data/chat-uploads
+    maxBytes: 15728640
