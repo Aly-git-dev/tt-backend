@@ -3,8 +3,8 @@ server:
 
 spring:
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
     username: ${MAIL_USER}
     password: ${MAIL_PASS}
     properties:
@@ -12,10 +12,12 @@ spring:
         smtp:
           auth: true
           starttls.enable: true
+
   datasource:
-    url: jdbc:postgresql://148.204.142.20:5432/upiiz_platform
-    username: upiiz
-    password: upiizpass
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,6 +25,7 @@ spring:
       hibernate:
         format_sql: true
     open-in-view: false
+
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -34,6 +37,7 @@ app:
       access-exp-min: 15
       refresh-exp-days: 14
       secret: ${JWT_SECRET}
+
   gesco:
     enabled: true
     base-url: "http://148.204.142.2/pump/web/index.php/login"
