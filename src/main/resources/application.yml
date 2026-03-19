@@ -27,7 +27,7 @@ spring:
     open-in-view: false
 
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
 
 app:
