@@ -39,7 +39,7 @@ public class SecurityConfig {
 
     @Bean public CorsConfigurationSource corsConfigurationSource(){
         var cfg=new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://148.204.142.20:3030", "http://148.204.142.20:3021", "http://148.204.142.20:4200"));
+        cfg.setAllowedOrigins(List.of("http://localhost:3030", "http://localhost:3021", "http://localhost:4200"));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization","Content-Type","X-App-BaseUrl"));
         cfg.setAllowCredentials(true);

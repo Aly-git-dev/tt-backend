@@ -2,8 +2,8 @@ package com.upiiz.platform_api.controller;
 
 import com.upiiz.platform_api.dto.*;
 import com.upiiz.platform_api.security.CurrentUser;
-import com.upiiz.platform_api.services.ChatService;
 import com.upiiz.platform_api.services.ChatReportService;
+import com.upiiz.platform_api.services.ChatService;
 import com.upiiz.platform_api.services.RoleSnapshotResolver;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
@@ -31,8 +31,6 @@ public class ChatController {
     @PostMapping("/conversations/direct")
     public ConversationResponse createOrGetDirect(@RequestBody CreateDirectConversationRequest req) {
         UUID me = CurrentUser.id();
-        // allowedPair lo podrías calcular por roles reales; por ahora lo enviamos fijo o lo decides en service
-        // aquí uso "PROFESOR-ALUMNO" como default para que compile:
         return chatService.createOrGetDirect(me, req.userId);
     }
 
@@ -56,7 +54,7 @@ public class ChatController {
         return chatService.getMessages(CurrentUser.id(), conversationId, before, limit);
     }
 
-    @PostMapping(value="/conversations/{conversationId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/conversations/{conversationId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public MessageResponse sendWithAttachments(
             @PathVariable Long conversationId,
             @RequestPart(required = false) String content,
@@ -70,5 +68,8 @@ public class ChatController {
     public ReportSummaryResponse report(@RequestBody CreateReportRequest req) {
         return reportService.createReport(CurrentUser.id(), req, roleResolver);
     }
+    @GetMapping("/users/search")
+    public List<UserSearchResponse> searchUsers(@RequestParam String q) {
+        return chatService.searchUsers(q);
+    }
 }
-

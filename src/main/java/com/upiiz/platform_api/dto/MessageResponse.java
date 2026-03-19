@@ -10,6 +10,7 @@ public class MessageResponse {
     public UUID senderId;
     public String content;
     public String contentType;
+    public String clientMessageId;
     public String status;
     public Instant createdAt;
     public List<AttachmentResponse> attachments;
