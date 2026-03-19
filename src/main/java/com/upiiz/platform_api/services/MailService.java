@@ -16,7 +16,21 @@ public class MailService {
     public MailService(@Nullable JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
+    public void sendPasswordResetEmail(String to, String token) {
 
+        String link = "http://localhost:4200/reset-password?token=" + token;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Recuperación de contraseña");
+        message.setText(
+                "Solicitaste restablecer tu contraseña.\n\n" +
+                        "Haz clic aquí:\n" + link + "\n\n" +
+                        "Expira en 30 minutos."
+        );
+
+        mailSender.send(message);
+    }
     public void sendVerificationEmail(String to, String link) {
         if (mailSender == null) {
             // Modo DEV: imprime en consola si no hay SMTP configurado

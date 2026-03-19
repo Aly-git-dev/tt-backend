@@ -1,4 +1,5 @@
 package com.upiiz.platform_api.dto;
 
-public class ForgotPasswordRequest {
-}
+public record ForgotPasswordRequest(
+        String email
+) {}

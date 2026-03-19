@@ -1,4 +1,7 @@
 package com.upiiz.platform_api.dto;
 
-public class ResetPasswordRequest {
-}
+public record ResetPasswordRequest(
+        String token,
+        String newPassword,
+        String confirmPassword
+) {}
