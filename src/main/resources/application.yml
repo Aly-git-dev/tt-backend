@@ -5,8 +5,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USER}
-    password: ${MAIL_PASS}
+    username: upiiz.notificaciones@gmail.com
+    password: czdr wxcv zdph smqe
     properties:
       mail:
         smtp:
@@ -33,11 +33,11 @@ app:
       issuer: upiiz-platform
       access-exp-min: 15
       refresh-exp-days: 14
-      secret: ${JWT_SECRET}
+      secret: PSECe1ioyABWlHE5E1uLqKRVPUcv2KKmsqmJ4jGmQ/Esau+HMlKESqvFCinolgxZ3xu1NTJorfc79I51HVHbtw==
   gesco:
     enabled: true
     base-url: "http://148.204.142.2/pump/web/index.php/login"
-    token: ${TOKEN}
+    token: 2001657889653220
     timeout-ms: 5000
 
 logging:
