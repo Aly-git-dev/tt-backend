@@ -1,57 +1,55 @@
-version: "3.9"
+server:
+  port: 8080
 
-services:
-  api:
-    build: .
-    container_name: upiiz_api
-    ports:
-      - "3021:8080"
-    depends_on:
-      - db
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      TOKEN: ${TOKEN}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-    restart: unless-stopped
+spring:
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${MAIL_USER}
+    password: ${MAIL_PASS}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls.enable: true
 
-  db:
-    image: postgres:16-alpine
-    container_name: upiiz_db
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
-  pgadmin:
-    image: dpage/pgadmin4:8
-    container_name: upiiz_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-    ports:
-      - "5050:80"
-    depends_on:
-      - db
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: upiiz_mailhog
-    ports:
-      - "8025:8025"
-      - "1025:1025"
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
 
-volumes:
-  db_data:
+app:
+  security:
+    jwt:
+      issuer: upiiz-platform
+      access-exp-min: 15
+      refresh-exp-days: 14
+      secret: ${JWT_SECRET}
+
+  gesco:
+    enabled: true
+    base-url: "http://148.204.142.2/pump/web/index.php/login"
+    token: ${TOKEN}
+    timeout-ms: 5000
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+
+chat:
+  storage:
+    baseDir: ./data/chat-uploads
+    maxBytes: 15728640
