@@ -5,8 +5,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${MAIL_USER:}
-    password: ${MAIL_PASS:}
+    username: ${MAIL_USER}
+    password: ${MAIL_PASS}
     properties:
       mail:
         smtp:
@@ -14,9 +14,9 @@ spring:
           starttls.enable: true
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/upiiz_platform
-    username: upiiz
-    password: upiizpass
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
   jpa:
     hibernate:
