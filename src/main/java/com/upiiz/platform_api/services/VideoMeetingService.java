@@ -176,4 +176,18 @@ public class VideoMeetingService {
         vm.cancel(currentUserId, request.reason());
         return videoMeetingRepo.save(vm);
     }
+    @Transactional(readOnly = true)
+    public VideoMeeting getByAppointment(UUID appointmentId, UUID currentUserId) {
+        VideoMeeting vm = videoMeetingRepo.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> new EntityNotFoundException("No existe videollamada para esta cita"));
+
+        boolean belongs = appointmentParticipantRepo
+                .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
+
+        if (!belongs && !vm.getCreatedBy().equals(currentUserId)) {
+            throw new IllegalStateException("No tienes acceso a esta videollamada");
+        }
+
+        return vm;
+    }
 }

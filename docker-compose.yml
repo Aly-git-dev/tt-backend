@@ -9,10 +9,10 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/upiiz_platform
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}  
+      JWT_SECRET: ${JWT_SECRET}
       TOKEN: ${TOKEN}
       MAIL_USER: ${MAIL_USER}
       MAIL_PASS: ${MAIL_PASS}
@@ -50,8 +50,8 @@ services:
     image: mailhog/mailhog:v1.0.1
     container_name: upiiz_mailhog
     ports:
-      - "8025:8025"  # UI
-      - "1025:1025"  # SMTP
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   db_data:

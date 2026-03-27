@@ -1,4 +1,4 @@
-package com.upiiz.platform_api.controllers;
+package com.upiiz.platform_api.controller;
 
 import com.upiiz.platform_api.dto.CancelVideoMeetingRequest;
 import com.upiiz.platform_api.dto.CreateVideoMeetingRequest;
@@ -7,6 +7,7 @@ import com.upiiz.platform_api.entities.VideoMeeting;
 import com.upiiz.platform_api.services.VideoMeetingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,41 +23,53 @@ public class VideoMeetingController {
     @PostMapping
     public VideoMeeting create(
             @Valid @RequestBody CreateVideoMeetingRequest request,
-            @RequestHeader("X-User-Id") UUID currentUserId
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         return videoMeetingService.create(request, currentUserId);
     }
 
     @GetMapping("/{id}")
     public VideoMeeting getById(
             @PathVariable UUID id,
-            @RequestHeader("X-User-Id") UUID currentUserId
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         return videoMeetingService.getById(id, currentUserId);
     }
 
-    @GetMapping("/mine")
-    public List<VideoMeeting> getMine(
-            @RequestHeader("X-User-Id") UUID currentUserId
+    @GetMapping("/by-appointment/{appointmentId}")
+    public VideoMeeting getByAppointment(
+            @PathVariable UUID appointmentId,
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
+        return videoMeetingService.getByAppointment(appointmentId, currentUserId);
+    }
+
+    @GetMapping("/mine")
+    public List<VideoMeeting> getMine(Authentication authentication) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         return videoMeetingService.getMine(currentUserId);
     }
 
     @PostMapping("/{id}/join")
     public JoinVideoMeetingResponse join(
             @PathVariable UUID id,
-            @RequestHeader("X-User-Id") UUID currentUserId,
             @RequestParam(defaultValue = "Usuario") String displayName,
-            @RequestParam(required = false) String deviceInfo
+            @RequestParam(required = false) String deviceInfo,
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         return videoMeetingService.join(id, currentUserId, displayName, deviceInfo);
     }
 
     @PostMapping("/{id}/leave")
     public void leave(
             @PathVariable UUID id,
-            @RequestHeader("X-User-Id") UUID currentUserId
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         videoMeetingService.leave(id, currentUserId);
     }
 
@@ -64,15 +77,9 @@ public class VideoMeetingController {
     public VideoMeeting cancel(
             @PathVariable UUID id,
             @Valid @RequestBody CancelVideoMeetingRequest request,
-            @RequestHeader("X-User-Id") UUID currentUserId
+            Authentication authentication
     ) {
+        UUID currentUserId = UUID.fromString(authentication.getName());
         return videoMeetingService.cancel(id, request, currentUserId);
-    }
-    @GetMapping("/by-appointment/{appointmentId}")
-    public VideoMeeting getByAppointment(
-            @PathVariable UUID appointmentId,
-            @RequestHeader("X-User-Id") UUID currentUserId
-    ) {
-        return videoMeetingService.getByAppointment(appointmentId, currentUserId);
     }
 }
