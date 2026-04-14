@@ -10,15 +10,9 @@ services:
       - db
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/upiiz_platform
-<<<<<<< HEAD
-      SPRING_DATASOURCE_USERNAME: upiiz
-      SPRING_DATASOURCE_PASSWORD: upiizpass
-      JWT_SECRET: ${JWT_SECRET}
-=======
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}  
->>>>>>> 3f5dbf18f352907dbf2622f8aed05eed3f0b19c3
       TOKEN: ${TOKEN}
       MAIL_USER: ${MAIL_USER}
       MAIL_PASS: ${MAIL_PASS}
@@ -28,15 +22,15 @@ services:
     image: postgres:16-alpine
     container_name: upiiz_db
     environment:
-      POSTGRES_DB: upiiz_platform
-      POSTGRES_USER: upiiz
-      POSTGRES_PASSWORD: upiizpass
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U upiiz -d upiiz_platform"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -45,8 +39,8 @@ services:
     image: dpage/pgadmin4:8
     container_name: upiiz_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@upiiz.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "5050:80"
     depends_on:
