@@ -14,10 +14,11 @@ import com.upiiz.platform_api.repositories.AppointmentParticipantRepo;
 import com.upiiz.platform_api.repositories.AppointmentRepo;
 import com.upiiz.platform_api.repositories.VideoMeetingAttendanceRepo;
 import com.upiiz.platform_api.repositories.VideoMeetingRepo;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,25 +38,40 @@ public class VideoMeetingService {
     @Transactional
     public VideoMeeting create(CreateVideoMeetingRequest request, UUID currentUserId) {
         Appointment appointment = appointmentRepo.findById(request.appointmentId())
-                .orElseThrow(() -> new EntityNotFoundException("La cita no existe"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "La cita no existe"
+                ));
 
         if (videoMeetingRepo.existsByAppointmentId(request.appointmentId())) {
-            throw new IllegalStateException("Ya existe una videoconferencia para esta cita");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe una videoconferencia para esta cita"
+            );
         }
 
         if (appointment.getModality() != Modality.ONLINE) {
-            throw new IllegalStateException("Solo se puede crear videoconferencia para citas online");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Solo se puede crear videoconferencia para citas online"
+            );
         }
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new IllegalStateException("No se puede crear videoconferencia para una cita cancelada");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede crear videoconferencia para una cita cancelada"
+            );
         }
 
         boolean creatorBelongs = appointmentParticipantRepo
                 .existsByAppointment_IdAndUserId(request.appointmentId(), currentUserId);
 
         if (!creatorBelongs && !appointment.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalStateException("No tienes permiso para crear esta videoconferencia");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No tienes permiso para crear esta videoconferencia"
+            );
         }
 
         String roomName = roomNameGenerator.generate(appointment.getTitle(), appointment.getId());
@@ -75,13 +91,40 @@ public class VideoMeetingService {
     @Transactional(readOnly = true)
     public VideoMeeting getById(UUID meetingId, UUID currentUserId) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
-                .orElseThrow(() -> new EntityNotFoundException("Videoconferencia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
 
         boolean belongs = appointmentParticipantRepo
                 .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
 
         if (!belongs && !vm.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalStateException("No tienes acceso a esta videoconferencia");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No tienes acceso a esta videoconferencia"
+            );
+        }
+
+        return vm;
+    }
+
+    @Transactional(readOnly = true)
+    public VideoMeeting getByAppointment(UUID appointmentId, UUID currentUserId) {
+        VideoMeeting vm = videoMeetingRepo.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No existe videollamada para esta cita"
+                ));
+
+        boolean belongs = appointmentParticipantRepo
+                .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
+
+        if (!belongs && !vm.getCreatedBy().equals(currentUserId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No tienes acceso a esta videollamada"
+            );
         }
 
         return vm;
@@ -95,21 +138,33 @@ public class VideoMeetingService {
     @Transactional
     public JoinVideoMeetingResponse join(UUID meetingId, UUID currentUserId, String displayName, String deviceInfo) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
-                .orElseThrow(() -> new EntityNotFoundException("Videoconferencia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
 
         boolean belongs = appointmentParticipantRepo
                 .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
 
         if (!belongs) {
-            throw new IllegalStateException("No perteneces a esta cita");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No perteneces a esta cita"
+            );
         }
 
         if (vm.getStatus() == VideoMeetingStatus.CANCELLED) {
-            throw new IllegalStateException("La videoconferencia fue cancelada");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La videoconferencia fue cancelada"
+            );
         }
 
         if (vm.getStatus() == VideoMeetingStatus.ENDED) {
-            throw new IllegalStateException("La videoconferencia ya terminó");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La videoconferencia ya terminó"
+            );
         }
 
         vm.markLive();
@@ -141,11 +196,17 @@ public class VideoMeetingService {
     @Transactional
     public void leave(UUID meetingId, UUID currentUserId) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
-                .orElseThrow(() -> new EntityNotFoundException("Videoconferencia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
 
         VideoMeetingAttendance attendance = videoMeetingAttendanceRepo
                 .findTopByVideoMeetingIdAndUserIdAndLeftAtIsNullOrderByJoinedAtDesc(meetingId, currentUserId)
-                .orElseThrow(() -> new IllegalStateException("No hay sesión activa para cerrar"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "No hay sesión activa para cerrar"
+                ));
 
         attendance.closeSession();
         videoMeetingAttendanceRepo.save(attendance);
@@ -160,27 +221,19 @@ public class VideoMeetingService {
     @Transactional
     public VideoMeeting cancel(UUID meetingId, CancelVideoMeetingRequest request, UUID currentUserId) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
-                .orElseThrow(() -> new EntityNotFoundException("Videoconferencia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
 
         if (!vm.getHostUserId().equals(currentUserId) && !vm.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalStateException("No tienes permiso para cancelar esta videoconferencia");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No tienes permiso para cancelar esta videoconferencia"
+            );
         }
 
         vm.cancel(currentUserId, request.reason());
         return videoMeetingRepo.save(vm);
-    }
-    @Transactional(readOnly = true)
-    public VideoMeeting getByAppointment(UUID appointmentId, UUID currentUserId) {
-        VideoMeeting vm = videoMeetingRepo.findByAppointmentId(appointmentId)
-                .orElseThrow(() -> new EntityNotFoundException("No existe videollamada para esta cita"));
-
-        boolean belongs = appointmentParticipantRepo
-                .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
-
-        if (!belongs && !vm.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalStateException("No tienes acceso a esta videollamada");
-        }
-
-        return vm;
     }
 }
