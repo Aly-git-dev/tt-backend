@@ -36,6 +36,13 @@ public class ChatAttachment {
     @Column(name="created_at", nullable=false, updatable=false)
     private Instant createdAt;
 
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
+
     // getters/setters
     public Long getId() { return id; }
     public Long getMessageId() { return messageId; }
