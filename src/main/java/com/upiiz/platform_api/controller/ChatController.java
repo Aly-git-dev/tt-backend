@@ -79,7 +79,6 @@ public class ChatController {
 
     @GetMapping("/attachments/{attachmentId}/download")
     public ResponseEntity<Resource> downloadAttachment(
-            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long attachmentId
     ) throws Exception {
         return chatService.downloadAttachment(CurrentUser.id(), attachmentId);
