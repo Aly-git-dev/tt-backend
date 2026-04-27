@@ -35,5 +35,9 @@ public class ChatFileStorage {
         return new StoredFile(out.toString(), safeName, file.getContentType(), file.getSize());
     }
 
+    public Path resolve(String storedPath) {
+        return Paths.get(storedPath).toAbsolutePath().normalize();
+    }
+
     public record StoredFile(String path, String originalName, String mimeType, long sizeBytes) {}
 }
