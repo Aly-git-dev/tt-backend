@@ -173,8 +173,8 @@ public class ChatService {
                 a.setMimeType(sf.mimeType() == null ? "application/octet-stream" : sf.mimeType());
                 a.setSizeBytes(sf.sizeBytes());
                 a.setStoragePath(sf.path());
-                saved.add(attRepo.save(a));
                 a.setCreatedAt(Instant.now());
+                saved.add(attRepo.save(a));
             }
         }
 
@@ -356,7 +356,7 @@ public class ChatService {
         ChatConversation c = access.requireConversation(m.getConversationId());
         access.requireParticipant(c, me);
 
-        Path path = Paths.get(a.getStoragePath()).normalize();
+        Path path = Paths.get(a.getStoragePath()).toAbsolutePath().normalize();
         Resource resource = new UrlResource(path.toUri());
 
         if (!resource.exists() || !resource.isReadable()) {
