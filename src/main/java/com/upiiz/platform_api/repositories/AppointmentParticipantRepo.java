@@ -11,5 +11,5 @@ public interface AppointmentParticipantRepo
 
     boolean existsByAppointment_IdAndUserId(UUID appointmentId, UUID userId);
 
-    List<AppointmentParticipant> findByAppointment_Id(UUID appointmentId);
+    List<Object[]> findAdminTopicInterest();
 }
