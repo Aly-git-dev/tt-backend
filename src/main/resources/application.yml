@@ -2,11 +2,16 @@ server:
   port: 8080
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${MAIL_USER}
-    password: ${MAIL_PASS}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASS:}
     properties:
       mail:
         smtp:
@@ -14,9 +19,9 @@ spring:
           starttls.enable: true
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/upiiz_platform}
+    username: ${SPRING_DATASOURCE_USERNAME:upiiz}
+    password: ${SPRING_DATASOURCE_PASSWORD:upiizpass}
 
   jpa:
     hibernate:
@@ -27,21 +32,28 @@ spring:
     open-in-view: false
 
   flyway:
-    enabled: false
+    enabled: true
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/upiiz_platform}
+    user: ${SPRING_DATASOURCE_USERNAME:upiiz}
+    password: ${SPRING_DATASOURCE_PASSWORD:upiizpass}
     locations: classpath:db/migration
+    baseline-on-migrate: true
 
 app:
+  frontend:
+    url: ${APP_FRONTEND_URL:http://148.204.142.20:3030}
+
   security:
     jwt:
       issuer: upiiz-platform
       access-exp-min: 15
       refresh-exp-days: 14
-      secret: ${JWT_SECRET}
+      secret: ${JWT_SECRET:dev-secret-key-para-local-cambiar-en-produccion}
 
   gesco:
     enabled: true
     base-url: "http://148.204.142.2/pump/web/index.php/login"
-    token: ${TOKEN}
+    token: ${TOKEN:}
     timeout-ms: 5000
 
 logging:
@@ -51,5 +63,5 @@ logging:
 
 chat:
   storage:
-    baseDir: ./data/chat-uploads
-    maxBytes: 15728640
+    baseDir: ${CHAT_STORAGE_BASE_DIR:/app/data/chat-uploads}
+    maxBytes: ${CHAT_STORAGE_MAX_BYTES:104857600}
