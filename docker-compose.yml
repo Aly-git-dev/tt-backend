@@ -9,7 +9,7 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-tt:5432/upiiz_platform
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-tt:5432/upiiz_platform
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}  
