@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   servlet:
@@ -19,16 +19,16 @@ spring:
           starttls.enable: true
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/upiiz_platform}
-    username: ${SPRING_DATASOURCE_USERNAME:upiiz}
-    password: ${SPRING_DATASOURCE_PASSWORD:upiizpass}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
     open-in-view: false
 
   flyway:
@@ -37,25 +37,25 @@ spring:
 
 app:
   frontend:
-    url: ${APP_FRONTEND_URL:http://148.204.142.20:3030}
+    url: ${APP_FRONTEND_URL:https://app.kalypi.xyz}
 
   security:
     jwt:
       issuer: upiiz-platform
-      access-exp-min: 15
-      refresh-exp-days: 14
-      secret: ${JWT_SECRET:dev-secret-key-para-local-cambiar-en-produccion}
+      access-exp-min: ${JWT_ACCESS_EXP_MIN:15}
+      refresh-exp-days: ${JWT_REFRESH_EXP_DAYS:14}
+      secret: ${JWT_SECRET}
 
   gesco:
-    enabled: true
-    base-url: "http://148.204.142.2/pump/web/index.php/login"
+    enabled: ${GESCO_ENABLED:true}
+    base-url: ${GESCO_BASE_URL:http://148.204.142.2/pump/web/index.php/login}
     token: ${TOKEN:}
-    timeout-ms: 5000
+    timeout-ms: ${GESCO_TIMEOUT_MS:5000}
 
 logging:
   level:
     org.springframework.security: INFO
-    org.hibernate.SQL: INFO
+    org.hibernate.SQL: WARN
 
 chat:
   storage:
