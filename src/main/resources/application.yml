@@ -32,12 +32,12 @@ spring:
     open-in-view: false
 
   flyway:
-    enabled: true
+    enabled: false
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/upiiz_platform}
     user: ${SPRING_DATASOURCE_USERNAME:upiiz}
     password: ${SPRING_DATASOURCE_PASSWORD:upiizpass}
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    baseline-on-migrate: false
 
 app:
   frontend:
