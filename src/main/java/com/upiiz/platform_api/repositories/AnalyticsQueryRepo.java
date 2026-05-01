@@ -22,7 +22,7 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
             unique_users::bigint AS "uniqueUsers",
             last_event_at AS "lastEventAt"
         FROM vw_admin_topic_interest
-        ORDER BY "weightedScore" DESC, "totalEvents" DESC
+        ORDER BY weighted_score DESC, total_events DESC
         """, nativeQuery = true)
     List<AdminTopicInterestProjection> findAdminTopicInterest();
 
@@ -38,7 +38,7 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
             affected_students::bigint AS "affectedStudents",
             last_report_at AS "lastReportAt"
         FROM vw_admin_topic_difficulty
-        ORDER BY "avgDifficulty" DESC, "totalReports" DESC
+        ORDER BY avg_difficulty DESC, total_reports DESC
         """, nativeQuery = true)
     List<AdminTopicDifficultyProjection> findAdminTopicDifficulty();
 
@@ -60,7 +60,7 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
             total_video_meetings::bigint AS "totalVideoMeetings",
             ended_video_meetings::bigint AS "endedVideoMeetings"
         FROM vw_teacher_performance
-        ORDER BY "avgGlobalScore" DESC, "totalEvaluations" DESC
+        ORDER BY avg_global_score DESC, total_evaluations DESC
         """, nativeQuery = true)
     List<TeacherPerformanceProjection> findTeacherPerformance();
 
@@ -99,7 +99,7 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
             avg_difficulty::numeric AS "avgDifficulty",
             last_event_at AS "lastEventAt"
         FROM vw_teacher_improvement_areas
-        ORDER BY "avgDifficulty" DESC, "totalDifficultyEvents" DESC
+        ORDER BY avg_difficulty DESC, total_difficulty_events DESC
         """, nativeQuery = true)
     List<TeacherImprovementAreaProjection> findTeacherImprovementAreas();
 
@@ -117,7 +117,7 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
             last_event_at AS "lastEventAt"
         FROM vw_teacher_improvement_areas
         WHERE teacher_id = :teacherId
-        ORDER BY "avgDifficulty" DESC, "totalDifficultyEvents" DESC
+        ORDER BY avg_difficulty DESC, total_difficulty_events DESC
         """, nativeQuery = true)
     List<TeacherImprovementAreaProjection> findTeacherImprovementAreasByTeacherId(@Param("teacherId") UUID teacherId);
 }
