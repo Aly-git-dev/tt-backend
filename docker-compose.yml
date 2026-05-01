@@ -1,57 +1,56 @@
 version: "3.9"
 
 services:
-  api:
-    build: .
-    container_name: upiiz_api
-    ports:
-      - "3021:8080"
-    depends_on:
-      - db
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-tt:5432/upiiz_platform
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}  
-      TOKEN: ${TOKEN}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-    restart: unless-stopped
-
-  db:
+  postgres:
     image: postgres:16-alpine
-    container_name: upiiz_db
+    container_name: postgres-tt
+    restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: upiiz_platform
+      POSTGRES_USER: upiiz
+      POSTGRES_PASSWORD: upiiz123
     volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tt-network
 
-  pgadmin:
-    image: dpage/pgadmin4:8
-    container_name: upiiz_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-    ports:
-      - "5050:80"
+  backend:
+    build: .
+    container_name: backend-tt
+    restart: always
     depends_on:
-      - db
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/upiiz_platform
+      SPRING_DATASOURCE_USERNAME: upiiz
+      SPRING_DATASOURCE_PASSWORD: upiiz123
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: upiiz_mailhog
+      JWT_SECRET: PSECe1ioyABW1HE5E1uLqKRVPUcv2KKmsqmJ4jGmQ/Esau+HM1KESqvFCinolgxZ3xu1NTJorfc79151HVHbtw==
+      TOKEN: 2001657889653220
+      MAIL_USER: upiiz.notificaciones@gmail.com
+      MAIL_PASS: czdr wxcv zdph smqe
+
+      APP_FRONTEND_URL: https://app.kalypi.xyz
+      SPRING_PROFILES_ACTIVE: prod
+
     ports:
-      - "8025:8025"  # UI
-      - "1025:1025"  # SMTP
+      - "8080:8080"
+    networks:
+      - tt-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend-tt
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - tt-network
 
 volumes:
-  db_data:
+  postgres_data:
+
+networks:
+  tt-network:
+    driver: bridge
