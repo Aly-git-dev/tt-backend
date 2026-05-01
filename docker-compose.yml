@@ -21,7 +21,7 @@ services:
     depends_on:
       - postgres
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://ttupiiz-postgrestt-448d32:5432/upiiz_platform
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/upiiz_platform
       SPRING_DATASOURCE_USERNAME: upiiz
       SPRING_DATASOURCE_PASSWORD: upiiz123
 
