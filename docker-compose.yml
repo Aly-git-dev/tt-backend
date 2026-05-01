@@ -23,7 +23,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://dokploy-postgres:5432/upiiz_platform
       SPRING_DATASOURCE_USERNAME: upiiz
-      SPRING_DATASOURCE_PASSWORD: upiiz123
+      SPRING_DATASOURCE_PASSWORD: upiizpass
 
       JWT_SECRET: PSECe1ioyABW1HE5E1uLqKRVPUcv2KKmsqmJ4jGmQ/Esau+HM1KESqvFCinolgxZ3xu1NTJorfc79151HVHbtw==
       TOKEN: 2001657889653220
