@@ -52,27 +52,12 @@ app:
     token: ${TOKEN:}
     timeout-ms: ${GESCO_TIMEOUT_MS:5000}
 
-<<<<<<< HEAD
-logging:
-  level:
-    org.springframework.security: INFO
-    org.hibernate.SQL: WARN
-=======
   push:
     subject: mailto:upiiz.notificaciones@gmail.com
     public-key: ${VAPID_PUBLIC_KEY:}
     private-key: ${VAPID_PRIVATE_KEY:}
->>>>>>> 8db4ccf (avances 05052026)
 
 chat:
   storage:
     baseDir: ${CHAT_STORAGE_BASE_DIR:/app/data/chat-uploads}
     maxBytes: ${CHAT_STORAGE_MAX_BYTES:104857600}
-<<<<<<< HEAD
-=======
-
-logging:
-  level:
-    org.springframework.security: INFO
-    org.hibernate.SQL: INFO
->>>>>>> 8db4ccf (avances 05052026)
