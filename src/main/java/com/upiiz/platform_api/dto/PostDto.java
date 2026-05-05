@@ -22,4 +22,7 @@ public class PostDto {
     private Instant createdAt;
 
     private List<AttachmentDto> attachments;
+
+    private Instant updatedAt;
+    private boolean likedByMe;
 }

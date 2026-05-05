@@ -6,6 +6,7 @@ import com.upiiz.platform_api.entities.ChatConversation;
 import com.upiiz.platform_api.entities.ChatMessage;
 import com.upiiz.platform_api.repositories.*;
 import com.upiiz.platform_api.storage.ChatFileStorage;
+import org.apache.catalina.User;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -328,7 +329,9 @@ public class ChatService {
      * Mientras tanto, el front ya no se rompe.
      */
     private String resolveOtherUserName(UUID otherUserId) {
-        return otherUserId != null ? otherUserId.toString() : null;
+        return userRepo.findById(otherUserId)
+                .map(u -> u.getNombre() + " (" + u.getEmailInst() + ")")
+                .orElse("Usuario");
     }
 
     private String resolveOtherUserAvatar(UUID otherUserId) {

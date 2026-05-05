@@ -72,6 +72,19 @@ public class ChatController {
     public ReportSummaryResponse report(@RequestBody CreateReportRequest req) {
         return reportService.createReport(CurrentUser.id(), req, roleResolver);
     }
+    @PostMapping("/messages/{messageId}/report")
+    public ReportSummaryResponse reportMessage(
+            @PathVariable Long messageId,
+            @RequestBody CreateReportRequest req
+    ) {
+        if (req == null) {
+            req = new CreateReportRequest();
+        }
+
+        req.messageId = messageId;
+
+        return reportService.createReport(CurrentUser.id(), req, roleResolver);
+    }
     @GetMapping("/users/search")
     public List<UserSearchResponse> searchUsers(@RequestParam String q) {
         return chatService.searchUsers(q);

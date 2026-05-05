@@ -18,4 +18,5 @@ public class ThreadSummaryDto {
     private int views;
     private String status;
     private Instant createdAt;
+    private boolean likedByMe;
 }

@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -16,21 +17,29 @@ public class ChatReportService {
     private final ChatMessageReportRepo reportRepo;
     private final ChatReportContextRepo ctxRepo;
     private final ChatAccessService access;
+    private final NotificationService notificationService;
 
     public ChatReportService(ChatMessageRepo msgRepo, ChatConversationRepo convRepo,
                              ChatMessageReportRepo reportRepo, ChatReportContextRepo ctxRepo,
-                             ChatAccessService access) {
+                             ChatAccessService access, NotificationService notificationService) {
         this.msgRepo = msgRepo;
         this.convRepo = convRepo;
         this.reportRepo = reportRepo;
         this.ctxRepo = ctxRepo;
         this.access = access;
+        this.notificationService = notificationService;
     }
 
     @Transactional
     public ReportSummaryResponse createReport(UUID me, CreateReportRequest req, RoleSnapshotResolver roleResolver) {
-        if (req == null || req.messageId == null) throw new IllegalArgumentException("messageId required");
-        if (req.reasonCode == null || req.reasonCode.isBlank()) throw new IllegalArgumentException("reasonCode required");
+
+        if (req == null || req.messageId == null) {
+            throw new IllegalArgumentException("messageId required");
+        }
+
+        if (req.reasonCode == null || req.reasonCode.isBlank()) {
+            req.reasonCode = "OTRO"; // 🔥 evita 500 por vacío
+        }
 
         ChatMessage reported = msgRepo.findById(req.messageId)
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
@@ -47,28 +56,29 @@ public class ChatReportService {
         r.setReasonCode(req.reasonCode.trim());
         r.setDescription(req.description);
         r.setStatus("PENDIENTE");
+        r.setCreatedAt(Instant.now());
+
         r = reportRepo.save(r);
 
-        // Traer reportado + 5 anteriores (total 6) por createdAt <= reportedAt
-        List<ChatMessage> contextDesc = msgRepo.contextForReport(conv.getId(), reported.getCreatedAt(), PageRequest.of(0, 6));
-
-        // Asegurar que el reportado esté incluido, y ponerlo en index 0
-        Map<Long, ChatMessage> map = new HashMap<>();
-        for (ChatMessage m : contextDesc) map.put(m.getId(), m);
+        // 🔎 CONTEXTO
+        List<ChatMessage> contextDesc = msgRepo.contextForReport(
+                conv.getId(),
+                reported.getCreatedAt(),
+                PageRequest.of(0, 6)
+        );
 
         List<ChatMessage> ordered = new ArrayList<>();
         ordered.add(reported);
 
-        // Los anteriores: tomar de contextDesc (que viene desc), saltar el reportado, hasta 5
         for (ChatMessage m : contextDesc) {
             if (m.getId().equals(reported.getId())) continue;
             ordered.add(m);
             if (ordered.size() == 6) break;
         }
 
-        // Guardar snapshot 0..5
         for (int i = 0; i < ordered.size(); i++) {
             ChatMessage m = ordered.get(i);
+
             ChatReportContext ctx = new ChatReportContext();
             ctx.setReportId(r.getId());
             ctx.setContextIndex((short) i);
@@ -78,6 +88,7 @@ public class ChatReportService {
             ctx.setContentSnapshot(m.getContent());
             ctx.setContentTypeSnapshot(m.getContentType());
             ctx.setCreatedAtSnapshot(m.getCreatedAt());
+
             ctxRepo.save(ctx);
         }
 
@@ -88,6 +99,15 @@ public class ChatReportService {
         out.createdAt = r.getCreatedAt();
         out.conversationId = r.getConversationId();
         out.reportedMessageId = r.getReportedMessageId();
+
+        // 🔥 NOTIFICACIONES SEGURAS (NO ROMPEN EL FLUJO)
+        try {
+            notificationService.notifyMessageReportSent(me, r.getId());
+            notificationService.notifyAdminsMessageReported(r.getId());
+        } catch (Exception e) {
+            System.err.println("⚠️ Error en notificaciones (no rompe reporte): " + e.getMessage());
+        }
+
         return out;
     }
 }

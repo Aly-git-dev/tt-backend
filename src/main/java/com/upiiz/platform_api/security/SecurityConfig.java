@@ -53,6 +53,7 @@ public class SecurityConfig {
         return http.build();
     }
 
+<<<<<<< HEAD
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         var cfg = new CorsConfiguration();
@@ -68,6 +69,13 @@ public class SecurityConfig {
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-App-BaseUrl"));
+=======
+    @Bean public CorsConfigurationSource corsConfigurationSource(){
+        var cfg=new CorsConfiguration();
+        cfg.setAllowedOrigins(List.of("http://localhost:3030", "http://localhost:3021", "http://localhost:4200"));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization","Content-Type","X-App-BaseUrl"));
+>>>>>>> 8db4ccf (avances 05052026)
         cfg.setAllowCredentials(true);
 
         var src = new UrlBasedCorsConfigurationSource();

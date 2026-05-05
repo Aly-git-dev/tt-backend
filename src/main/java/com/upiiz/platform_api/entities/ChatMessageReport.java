@@ -64,5 +64,9 @@ public class ChatMessageReport {
     public Instant getHandledAt() { return handledAt; }
     public void setHandledAt(Instant handledAt) { this.handledAt = handledAt; }
     public Instant getCreatedAt() { return createdAt; }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 }
 

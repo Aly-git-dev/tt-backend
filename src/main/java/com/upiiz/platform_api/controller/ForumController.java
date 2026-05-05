@@ -100,14 +100,11 @@ public class ForumController {
             content = @Content
     )
     public ResponseEntity<ThreadDetailDto> getThread(
-            @Parameter(
-                    description = "Identificador del hilo",
-                    required = true,
-                    example = "1"
-            )
-            @PathVariable Long id
+            @PathVariable Long id,
+            Authentication auth
     ) {
-        ThreadDetailDto thread = forumService.getThread(id);
+        String email = getEmail(auth);
+        ThreadDetailDto thread = forumService.getThread(id, email);
         return ResponseEntity.ok(thread);
     }
 
@@ -238,5 +235,89 @@ public class ForumController {
 
         var dto = forumService.getUserSummary(user.getId());
         return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/threads/{id}")
+    public ResponseEntity<ThreadDetailDto> updateThread(
+            @PathVariable Long id,
+            @RequestBody ThreadUpdateDto dto,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        ThreadDetailDto updated = forumService.updateThread(id, dto, email);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/threads/{id}")
+    public ResponseEntity<Void> deleteThread(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        forumService.deleteThread(id, email);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/posts/{id}")
+    public ResponseEntity<PostDto> updatePost(
+            @PathVariable Long id,
+            @RequestBody PostUpdateDto dto,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        PostDto updated = forumService.updatePost(id, dto, email);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/posts/{id}")
+    public ResponseEntity<Void> deletePost(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        forumService.deletePost(id, email);
+        return ResponseEntity.noContent().build();
+    }
+    @PostMapping("/threads/{id}/like")
+    public ResponseEntity<ThreadDetailDto> likeThread(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.likeThread(id, email));
+    }
+
+    @DeleteMapping("/threads/{id}/like")
+    public ResponseEntity<ThreadDetailDto> unlikeThread(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.unlikeThread(id, email));
+    }
+
+    @PostMapping("/posts/{id}/like")
+    public ResponseEntity<PostDto> likePost(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.likePost(id, email));
+    }
+
+    @DeleteMapping("/posts/{id}/like")
+    public ResponseEntity<PostDto> unlikePost(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.unlikePost(id, email));
+    }
+
+    @GetMapping("/threads")
+    public ResponseEntity<List<ThreadSummaryDto>> getAllThreads(Authentication auth) {
+        String email = getEmail(auth);
+        List<ThreadSummaryDto> threads = forumService.getAllOpenThreads(email);
+        return ResponseEntity.ok(threads);
     }
 }

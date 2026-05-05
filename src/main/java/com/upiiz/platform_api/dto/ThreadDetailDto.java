@@ -31,4 +31,6 @@ public class ThreadDetailDto {
 
     private List<PostDto> posts;
     List<AttachmentDto> attachments;
+
+    private boolean likedByMe;
 }

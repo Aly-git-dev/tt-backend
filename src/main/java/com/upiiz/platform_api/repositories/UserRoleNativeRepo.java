@@ -11,10 +11,18 @@ import java.util.UUID;
 public interface UserRoleNativeRepo extends JpaRepository<User, UUID> {
 
     @Query(value = """
-        select r.name
-        from roles r
-        join user_roles ur on ur.role_id = r.id
-        where ur.user_id = :uid
+        SELECT r.name
+        FROM roles r
+        JOIN user_roles ur ON ur.role_id = r.id
+        WHERE ur.user_id = :uid
     """, nativeQuery = true)
     List<String> roleNames(@Param("uid") UUID userId);
+
+    @Query(value = """
+        SELECT ur.user_id
+        FROM user_roles ur
+        JOIN roles r ON r.id = ur.role_id
+        WHERE UPPER(r.name) = UPPER(:roleName)
+    """, nativeQuery = true)
+    List<UUID> findUserIdsByRoleName(@Param("roleName") String roleName);
 }
