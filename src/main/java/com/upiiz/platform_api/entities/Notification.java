@@ -30,7 +30,7 @@ public class Notification {
     private String targetType;
 
     @Column(name = "target_id")
-    private String targetId;
+    private UUID targetId;
 
     @Column(name = "read_at")
     private LocalDateTime readAt;
