@@ -25,7 +25,7 @@ public record NotificationResponse(
                 n.getTitle(),
                 n.getBody(),
                 n.getTargetType(),
-                n.getTargetId(),
+                n.getTargetId() != null ? n.getTargetId().toString() : null,
                 n.getReadAt() != null,
                 n.getReadAt(),
                 n.getCreatedAt()
