@@ -28,27 +28,28 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(UserDetailsService uds, PasswordEncoder enc) {
-        var p = new DaoAuthenticationProvider();
-        p.setUserDetailsService(uds);
-        p.setPasswordEncoder(enc);
-        return new ProviderManager(p);
+        var provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(uds);
+        provider.setPasswordEncoder(enc);
+        return new ProviderManager(provider);
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter f) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/upiiz/public/v1/auth/**",
+                    "/upiiz/public/v1/video-meetings/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(f, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -63,20 +64,17 @@ public class SecurityConfig {
             "http://148.204.142.20:3030",
             "http://148.204.142.20:3021",
             "http://148.204.142.20:4200",
+            "http://localhost:3030",
+            "http://localhost:3021",
             "http://localhost:4200"
         ));
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-App-BaseUrl"));
-    @Bean public CorsConfigurationSource corsConfigurationSource(){
-        var cfg=new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://localhost:3030", "http://localhost:3021", "http://localhost:4200"));
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization","Content-Type","X-App-BaseUrl"));
         cfg.setAllowCredentials(true);
 
-        var src = new UrlBasedCorsConfigurationSource();
-        src.registerCorsConfiguration("/**", cfg);
-        return src;
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cfg);
+        return source;
     }
 }
