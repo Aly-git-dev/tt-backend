@@ -49,7 +49,7 @@ public class Notification {
     public String getTitle() { return title; }
     public String getBody() { return body; }
     public String getTargetType() { return targetType; }
-    public String getTargetId() { return targetId; }
+    public UUID getTargetId() { return targetId; }
     public LocalDateTime getReadAt() { return readAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
@@ -58,7 +58,7 @@ public class Notification {
     public void setTitle(String title) { this.title = title; }
     public void setBody(String body) { this.body = body; }
     public void setTargetType(String targetType) { this.targetType = targetType; }
-    public void setTargetId(String targetId) { this.targetId = targetId; }
+    public void setTargetId(UUID targetId) { this.targetId = targetId; }
     public void setReadAt(LocalDateTime readAt) { this.readAt = readAt; }
 
     public boolean isRead() {
