@@ -79,9 +79,7 @@ public class Notification {
         n.setTitle(title);
         n.setBody(body);
         n.setTargetType(targetType.name());
-        n.setTargetId(
-                targetId != null ? String.valueOf(UUID.fromString(targetId.toString())) : null
-        );
+        n.setTargetId(targetId);
         return n;
     }
 }
