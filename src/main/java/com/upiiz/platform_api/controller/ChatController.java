@@ -75,7 +75,7 @@ public class ChatController {
     @PostMapping("/messages/{messageId}/report")
     public ReportSummaryResponse reportMessage(
             @PathVariable Long messageId,
-            @RequestBody CreateReportRequest req
+            @RequestBody(required = false) CreateReportRequest req
     ) {
         if (req == null) {
             req = new CreateReportRequest();
