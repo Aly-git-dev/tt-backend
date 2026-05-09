@@ -13,7 +13,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
@@ -37,9 +43,19 @@ public class WebPushService {
     ) {
         this.subscriptionRepo = subscriptionRepo;
         this.objectMapper = objectMapper;
-        this.publicKey = normalizeKey(publicKey);
-        this.privateKey = normalizeKey(privateKey);
         this.subject = subject == null ? "" : subject.trim();
+
+        String configuredPublicKey = normalizeKey(publicKey);
+        String configuredPrivateKey = normalizeKey(privateKey);
+
+        if (isValidPublicKey(configuredPublicKey) && isValidPrivateKey(configuredPrivateKey)) {
+            this.publicKey = configuredPublicKey;
+            this.privateKey = configuredPrivateKey;
+        } else {
+            KeyPair generated = generateVapidKeyPair();
+            this.publicKey = encodePublicKey(generated);
+            this.privateKey = encodePrivateKey(generated);
+        }
     }
 
     public String getPublicKey() {
@@ -47,12 +63,11 @@ public class WebPushService {
     }
 
     public boolean hasValidPublicKey() {
-        byte[] decoded = decodeBase64Url(publicKey);
-        return decoded.length == 65 && decoded[0] == 0x04;
+        return isValidPublicKey(publicKey);
     }
 
     public boolean hasValidPrivateKey() {
-        return decodeBase64Url(privateKey).length == 32;
+        return isValidPrivateKey(privateKey);
     }
 
     @Transactional
@@ -113,6 +128,52 @@ public class WebPushService {
 
     private String normalizeKey(String key) {
         return key == null ? "" : key.trim();
+    }
+
+    private boolean isValidPublicKey(String key) {
+        byte[] decoded = decodeBase64Url(key);
+        return decoded.length == 65 && decoded[0] == 0x04;
+    }
+
+    private boolean isValidPrivateKey(String key) {
+        return decodeBase64Url(key).length == 32;
+    }
+
+    private KeyPair generateVapidKeyPair() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+            generator.initialize(new ECGenParameterSpec("secp256r1"));
+            return generator.generateKeyPair();
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("No se pudo generar un par VAPID temporal", e);
+        }
+    }
+
+    private String encodePublicKey(KeyPair keyPair) {
+        ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
+        byte[] x = unsignedFixedLength(publicKey.getW().getAffineX(), 32);
+        byte[] y = unsignedFixedLength(publicKey.getW().getAffineY(), 32);
+        byte[] uncompressed = new byte[65];
+        uncompressed[0] = 0x04;
+        System.arraycopy(x, 0, uncompressed, 1, 32);
+        System.arraycopy(y, 0, uncompressed, 33, 32);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
+    }
+
+    private String encodePrivateKey(KeyPair keyPair) {
+        ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(unsignedFixedLength(privateKey.getS(), 32));
+    }
+
+    private byte[] unsignedFixedLength(BigInteger value, int length) {
+        byte[] source = value.toByteArray();
+        byte[] result = new byte[length];
+        int copyStart = Math.max(0, source.length - length);
+        int copyLength = Math.min(source.length, length);
+        System.arraycopy(source, copyStart, result, length - copyLength, copyLength);
+        return result;
     }
 
     private byte[] decodeBase64Url(String value) {

@@ -5,7 +5,6 @@ import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.services.WebPushService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -27,15 +26,7 @@ public class PushSubscriptionController {
     }
 
     @GetMapping("/public-key")
-    public ResponseEntity<?> publicKey() {
-        if (!webPushService.hasValidPublicKey()) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
-                    "ok", false,
-                    "message", "Notificaciones push no configuradas: VAPID_PUBLIC_KEY invalida o ausente",
-                    "data", ""
-            ));
-        }
-
+    public ResponseEntity<Map<String, String>> publicKey() {
         return ResponseEntity.ok(Map.of("publicKey", webPushService.getPublicKey()));
     }
 
