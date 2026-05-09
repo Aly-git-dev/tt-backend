@@ -111,7 +111,14 @@ public class AuthService {
     // =============== APROBAR USUARIO (ADMIN) ===============
     @Transactional
     public Map<String, Object> approveUser(UUID userId) {
-        var u = users.findById(userId).orElseThrow();
+        var u = users.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        if (!u.isActive()) {
+            throw new IllegalStateException("El usuario esta desactivado");
+        }
+        if (!u.isEmailVerified()) {
+            throw new IllegalStateException("El usuario aun no confirma su correo");
+        }
         u.setApproved(true);
         users.save(u);
         return Map.of("estado", 1, "mensaje", "Usuario aprobado");

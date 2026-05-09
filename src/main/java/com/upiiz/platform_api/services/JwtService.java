@@ -26,8 +26,8 @@ public class JwtService {
     public JwtService(
             @Value("${app.security.jwt.secret}") String secret,
             @Value("${app.security.jwt.issuer:upiiz-platform}") String issuer,
-            @Value("${app.security.jwt.access-minutes:60}") long accessMinutes,
-            @Value("${app.security.jwt.refresh-days:7}") long refreshDays
+            @Value("${app.security.jwt.access-exp-min:${app.security.jwt.access-minutes:60}}") long accessMinutes,
+            @Value("${app.security.jwt.refresh-exp-days:${app.security.jwt.refresh-days:7}}") long refreshDays
     ) {
         this.secret = secret;
         this.issuer = issuer;

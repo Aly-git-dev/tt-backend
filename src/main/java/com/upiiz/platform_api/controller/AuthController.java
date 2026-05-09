@@ -285,6 +285,10 @@ public class AuthController {
     ) {
         try {
             return ResponseEntity.ok(svc.approveUser(userId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(Map.of("estado", 0, "mensaje", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("estado", 0, "mensaje", "Error interno", "error", e.getMessage()));
         }
