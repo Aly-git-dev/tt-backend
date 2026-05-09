@@ -65,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/upiiz/public/v1/push/public-key").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/upiiz/public/v1/auth/approve/**").hasRole("ADMIN")
+                .requestMatchers("/upiiz/admin/v1/chats", "/upiiz/admin/v1/chats/**").authenticated()
                 .requestMatchers("/upiiz/admin/**").hasRole("ADMIN")
                 .requestMatchers(
                     "/upiiz/public/v1/auth/registro",
