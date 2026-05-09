@@ -31,6 +31,9 @@ services:
       MAIL_USER: upiiz.notificaciones@gmail.com
       MAIL_PASS: "czdr wxcv zdph smqe"
 
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+
       APP_FRONTEND_URL: https://app.kalypi.xyz
       SPRING_PROFILES_ACTIVE: prod
     ports:

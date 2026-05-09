@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.GeneralSecurityException;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,9 +37,22 @@ public class WebPushService {
     ) {
         this.subscriptionRepo = subscriptionRepo;
         this.objectMapper = objectMapper;
-        this.publicKey = publicKey;
-        this.privateKey = privateKey;
-        this.subject = subject;
+        this.publicKey = normalizeKey(publicKey);
+        this.privateKey = normalizeKey(privateKey);
+        this.subject = subject == null ? "" : subject.trim();
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public boolean hasValidPublicKey() {
+        byte[] decoded = decodeBase64Url(publicKey);
+        return decoded.length == 65 && decoded[0] == 0x04;
+    }
+
+    public boolean hasValidPrivateKey() {
+        return decodeBase64Url(privateKey).length == 32;
     }
 
     @Transactional
@@ -57,6 +71,10 @@ public class WebPushService {
     }
 
     public void sendToUser(UUID userId, PushNotificationPayload payload) {
+        if (!hasValidPublicKey() || !hasValidPrivateKey() || subject.isBlank()) {
+            return;
+        }
+
         List<PushSubscription> subscriptions = subscriptionRepo.findByUserIdAndActiveTrue(userId);
 
         subscriptions.forEach(sub -> {
@@ -90,6 +108,28 @@ public class WebPushService {
         if (statusCode == 404 || statusCode == 410) {
             sub.setActive(false);
             subscriptionRepo.save(sub);
+        }
+    }
+
+    private String normalizeKey(String key) {
+        return key == null ? "" : key.trim();
+    }
+
+    private byte[] decodeBase64Url(String value) {
+        if (value == null || value.isBlank()) {
+            return new byte[0];
+        }
+
+        String normalized = value.trim()
+                .replace('-', '+')
+                .replace('_', '/');
+        int padding = (4 - normalized.length() % 4) % 4;
+        normalized = normalized + "=".repeat(padding);
+
+        try {
+            return Base64.getDecoder().decode(normalized);
+        } catch (IllegalArgumentException e) {
+            return new byte[0];
         }
     }
 }
