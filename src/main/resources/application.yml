@@ -61,11 +61,8 @@ chat:
   storage:
     baseDir: ${CHAT_STORAGE_BASE_DIR:/app/data/chat-uploads}
     maxBytes: ${CHAT_STORAGE_MAX_BYTES:104857600}
-<<<<<<< HEAD
-=======
 
 logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: WARN
->>>>>>> 5e2fe04 (correcciones validación de usuarios)

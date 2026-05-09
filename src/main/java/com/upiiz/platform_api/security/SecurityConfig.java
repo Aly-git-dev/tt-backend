@@ -8,8 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -44,22 +44,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                    response.getWriter().write("{\"estado\":0,\"mensaje\":\"No autenticado\"}");
-                })
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                    response.getWriter().write("{\"estado\":0,\"mensaje\":\"No tienes permisos para realizar esta accion\"}");
-                })
+                .authenticationEntryPoint((request, response, authException) -> writeJsonError(
+                    response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "No autenticado"
+                ))
+                .accessDeniedHandler((request, response, accessDeniedException) -> writeJsonError(
+                    response,
+                    HttpServletResponse.SC_FORBIDDEN,
+                    "No tienes permisos para realizar esta accion"
+                ))
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -67,10 +67,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/upiiz/public/v1/auth/approve/**").hasRole("ADMIN")
                 .requestMatchers("/upiiz/admin/**").hasRole("ADMIN")
                 .requestMatchers(
-<<<<<<< HEAD
-                    "/upiiz/public/v1/auth/**",
-                    "/upiiz/public/v1/video-meetings/**",
-=======
                     "/upiiz/public/v1/auth/registro",
                     "/upiiz/public/v1/auth/confirm",
                     "/upiiz/public/v1/auth/login",
@@ -78,7 +74,6 @@ public class SecurityConfig {
                     "/upiiz/public/v1/auth/logout",
                     "/upiiz/public/v1/auth/forgot-password",
                     "/upiiz/public/v1/auth/reset-password",
->>>>>>> 5e2fe04 (correcciones validación de usuarios)
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
@@ -100,26 +95,22 @@ public class SecurityConfig {
             "http://148.204.142.20:3030",
             "http://148.204.142.20:3021",
             "http://148.204.142.20:4200",
-<<<<<<< HEAD
-            "http://localhost:3030",
-            "http://localhost:3021",
-            "http://localhost:4200"
-        ));
-
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-App-BaseUrl"));
-=======
             "http://localhost:*",
             "http://127.0.0.1:*"
         ));
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
->>>>>>> 5e2fe04 (correcciones validación de usuarios)
         cfg.setAllowCredentials(true);
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
         return source;
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String message) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("{\"estado\":0,\"mensaje\":\"" + message + "\"}");
     }
 }
