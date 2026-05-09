@@ -2,6 +2,7 @@ package com.upiiz.platform_api.controller;
 
 import com.upiiz.platform_api.auth.dto.LoginRequest;
 import com.upiiz.platform_api.auth.dto.RegisterRequest;
+import com.upiiz.platform_api.auth.dto.ResendVerificationRequest;
 import com.upiiz.platform_api.auth.dto.TokensResponse;
 import com.upiiz.platform_api.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -127,13 +128,23 @@ public class AuthController {
             @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
     ) {
         try {
-            String appBase = (baseUrl == null || baseUrl.isBlank()) ? "http://localhost:8080" : baseUrl;
-            var res = svc.register(r, appBase);
+            var res = svc.register(r);
             return ResponseEntity.status(201).body(res);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(409).body(Map.of("estado", 0, "mensaje", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("estado", 0, "mensaje", "Error interno", "error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestBody ResendVerificationRequest request) {
+        try {
+            return ResponseEntity.ok(svc.resendVerification(request.emailInst()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("estado", 0, "mensaje", "Error interno", "error", e.getMessage()));
         }

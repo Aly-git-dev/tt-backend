@@ -74,6 +74,7 @@ public class SecurityConfig {
                     "/upiiz/public/v1/auth/logout",
                     "/upiiz/public/v1/auth/forgot-password",
                     "/upiiz/public/v1/auth/reset-password",
+                    "/upiiz/public/v1/auth/resend-verification",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"

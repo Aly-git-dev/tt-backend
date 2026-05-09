@@ -11,6 +11,7 @@ import com.upiiz.platform_api.repositories.RoleRepository;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.gesco.GescoClient; // GESCO: quita este import si no lo usas
 import com.upiiz.platform_api.gesco.GescoLoginResponse; // GESCO: idem
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +33,7 @@ public class AuthService {
     private final JwtService jwt;
     private final MailService mail;
     private final GescoClient gesco;
+    private final String apiBaseUrl;
 
     public AuthService(AuthenticationManager authManager,
                        UserRepository users,
@@ -40,7 +42,8 @@ public class AuthService {
                        PasswordEncoder encoder,
                        JwtService jwt,
                        MailService mail,
-                       GescoClient gesco
+                       GescoClient gesco,
+                       @Value("${app.api.url}") String apiBaseUrl
     ) {
         this.authManager = authManager;
         this.users = users;
@@ -50,11 +53,12 @@ public class AuthService {
         this.jwt = jwt;
         this.mail = mail;
         this.gesco = gesco; // GESCO
+        this.apiBaseUrl = normalizeBaseUrl(apiBaseUrl);
     }
 
     // =============== REGISTRO LOCAL ===============
     @Transactional
-    public Map<String, Object> register(RegisterRequest r, String appBaseUrl) {
+    public Map<String, Object> register(RegisterRequest r) {
         if (r.getEmailInst() == null || !r.getEmailInst().toLowerCase().contains("ipn")) {
             throw new IllegalArgumentException("El correo debe ser institucional (@ipn)");
         }
@@ -80,15 +84,45 @@ public class AuthService {
         u.setRoles(Set.of(role));
         users.save(u);
 
-        var ev = new EmailVerification();
-        ev.setUserId(u.getId());
-        ev.setExpiresAt(Instant.now().plus(48, ChronoUnit.HOURS));
-        emailVerifs.save(ev);
-
-        String link = appBaseUrl + "/upiiz/public/v1/auth/confirm?token=" + ev.getToken();
-        mail.sendVerificationEmail(u.getEmailInst(), link);
+        sendNewVerificationEmail(u);
 
         return Map.of("estado", 1, "mensaje", "Registro creado. Revisa tu correo para confirmar.");
+    }
+
+    @Transactional
+    public Map<String, Object> resendVerification(String emailInst) {
+        if (emailInst == null || emailInst.isBlank()) {
+            throw new IllegalArgumentException("El correo institucional es obligatorio");
+        }
+
+        User user = users.findByEmailInst(emailInst)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        if (user.isEmailVerified()) {
+            return Map.of("estado", 1, "mensaje", "El correo ya fue confirmado.");
+        }
+
+        emailVerifs.findByUserIdAndUsedFalse(user.getId()).forEach(token -> token.setUsed(true));
+        sendNewVerificationEmail(user);
+
+        return Map.of("estado", 1, "mensaje", "Correo de confirmacion reenviado.");
+    }
+
+    private void sendNewVerificationEmail(User user) {
+        var ev = new EmailVerification();
+        ev.setUserId(user.getId());
+        ev.setExpiresAt(Instant.now().plus(48, ChronoUnit.HOURS));
+        EmailVerification saved = emailVerifs.save(ev);
+
+        String link = apiBaseUrl + "/upiiz/public/v1/auth/confirm?token=" + saved.getToken();
+        mail.sendVerificationEmail(user.getEmailInst(), link);
+    }
+
+    private String normalizeBaseUrl(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "http://localhost:8080";
+        }
+        return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
     // =============== CONFIRMAR CORREO ===============

@@ -34,6 +34,7 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
+      APP_API_URL: https://api.kalypi.xyz
       APP_FRONTEND_URL: https://app.kalypi.xyz
       SPRING_PROFILES_ACTIVE: prod
     ports:

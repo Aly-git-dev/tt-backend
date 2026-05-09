@@ -36,6 +36,9 @@ spring:
     locations: classpath:db/migration
 
 app:
+  api:
+    url: ${APP_API_URL:https://api.kalypi.xyz}
+
   frontend:
     url: ${APP_FRONTEND_URL:https://app.kalypi.xyz}
 
