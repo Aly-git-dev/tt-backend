@@ -2,6 +2,8 @@ package com.upiiz.platform_api.repositories;
 
 import com.upiiz.platform_api.entities.ForumThread;
 import com.upiiz.platform_api.models.ForumStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,28 @@ public interface ForumThreadRepository extends JpaRepository<ForumThread, Long> 
     List<ForumThread> findByStatusOrderByCreatedAtDesc(ForumStatus status);
 
     long countByAuthorId(UUID authorId);
+
+    @Query("""
+        select t
+        from ForumThread t
+        join t.category c
+        join t.author a
+        left join t.subarea s
+        where t.status = :status
+          and (
+              :term = ''
+              or lower(t.title) like lower(concat('%', :term, '%'))
+              or lower(t.body) like lower(concat('%', :term, '%'))
+              or lower(c.name) like lower(concat('%', :term, '%'))
+              or lower(coalesce(s.name, '')) like lower(concat('%', :term, '%'))
+              or lower(a.nombre) like lower(concat('%', :term, '%'))
+          )
+        """)
+    Page<ForumThread> searchOpenThreads(
+            @Param("term") String term,
+            @Param("status") ForumStatus status,
+            Pageable pageable
+    );
 
     @Query(value = """
         WITH explicit_interests AS (

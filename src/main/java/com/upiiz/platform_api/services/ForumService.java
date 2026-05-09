@@ -8,6 +8,9 @@ import com.upiiz.platform_api.models.ReportStatus;
 import com.upiiz.platform_api.models.ThreadType;
 import com.upiiz.platform_api.repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -400,6 +403,22 @@ public class ForumService {
                         .stream())
                 .map(t -> mapThreadToSummary(t, user))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ThreadSummaryDto> searchOpenThreads(String userEmail, String q, int page, int size) {
+        User user = findUserByEmail(userEmail);
+        String term = q == null ? "" : q.trim().toLowerCase();
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        PageRequest pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return threadRepo.searchOpenThreads(term, ForumStatus.ABIERTO, pageable)
+                .map(t -> mapThreadToSummary(t, user));
     }
 
     @Transactional

@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -78,10 +79,22 @@ public class ForumController {
                 .body(created);
     }
 
+    @GetMapping("/threads/search")
+    public ResponseEntity<Page<ThreadSummaryDto>> searchThreads(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size,
+            Authentication auth
+    ) {
+        String email = getEmail(auth);
+        Page<ThreadSummaryDto> threads = forumService.searchOpenThreads(email, q, page, size);
+        return ResponseEntity.ok(threads);
+    }
+
     // =========================================================
     // Obtener detalle de hilo
     // =========================================================
-    @GetMapping("/threads/{id}")
+    @GetMapping("/threads/{id:\\d+}")
     @Operation(
             summary = "Obtener detalle de un hilo",
             description = """
@@ -111,7 +124,7 @@ public class ForumController {
     // =========================================================
     // Crear respuesta / comentario en un hilo
     // =========================================================
-    @PostMapping("/threads/{id}/posts")
+    @PostMapping("/threads/{id:\\d+}/posts")
     @Operation(
             summary = "Responder a un hilo de foro",
             description = """
@@ -237,7 +250,7 @@ public class ForumController {
         return ResponseEntity.ok(dto);
     }
 
-    @PutMapping("/threads/{id}")
+    @PutMapping("/threads/{id:\\d+}")
     public ResponseEntity<ThreadDetailDto> updateThread(
             @PathVariable Long id,
             @RequestBody ThreadUpdateDto dto,
@@ -248,7 +261,7 @@ public class ForumController {
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/threads/{id}")
+    @DeleteMapping("/threads/{id:\\d+}")
     public ResponseEntity<Void> deleteThread(
             @PathVariable Long id,
             Authentication auth
@@ -258,7 +271,7 @@ public class ForumController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/posts/{id}")
+    @PutMapping("/posts/{id:\\d+}")
     public ResponseEntity<PostDto> updatePost(
             @PathVariable Long id,
             @RequestBody PostUpdateDto dto,
@@ -269,7 +282,7 @@ public class ForumController {
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/posts/{id}")
+    @DeleteMapping("/posts/{id:\\d+}")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long id,
             Authentication auth
@@ -278,7 +291,7 @@ public class ForumController {
         forumService.deletePost(id, email);
         return ResponseEntity.noContent().build();
     }
-    @PostMapping("/threads/{id}/like")
+    @PostMapping("/threads/{id:\\d+}/like")
     public ResponseEntity<ThreadDetailDto> likeThread(
             @PathVariable Long id,
             Authentication auth
@@ -287,7 +300,7 @@ public class ForumController {
         return ResponseEntity.ok(forumService.likeThread(id, email));
     }
 
-    @DeleteMapping("/threads/{id}/like")
+    @DeleteMapping("/threads/{id:\\d+}/like")
     public ResponseEntity<ThreadDetailDto> unlikeThread(
             @PathVariable Long id,
             Authentication auth
@@ -296,7 +309,7 @@ public class ForumController {
         return ResponseEntity.ok(forumService.unlikeThread(id, email));
     }
 
-    @PostMapping("/posts/{id}/like")
+    @PostMapping("/posts/{id:\\d+}/like")
     public ResponseEntity<PostDto> likePost(
             @PathVariable Long id,
             Authentication auth
@@ -305,7 +318,7 @@ public class ForumController {
         return ResponseEntity.ok(forumService.likePost(id, email));
     }
 
-    @DeleteMapping("/posts/{id}/like")
+    @DeleteMapping("/posts/{id:\\d+}/like")
     public ResponseEntity<PostDto> unlikePost(
             @PathVariable Long id,
             Authentication auth
