@@ -13,6 +13,7 @@ import com.upiiz.platform_api.repositories.UserRoleNativeRepo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -267,7 +268,7 @@ public class NotificationService {
         sendBrowserPush(userId, title, body, "/messages/" + conversationId);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notifyMessageReportSent(UUID userId, Long reportId) {
         String title = "Reporte enviado";
         String body = "Tu reporte fue enviado y será revisado por un administrador.";
@@ -284,7 +285,7 @@ public class NotificationService {
         sendBrowserPush(userId, title, body, "/messages");
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notifyAdminsMessageReported(Long reportId) {
         String title = "Nuevo reporte de mensaje";
         String body = "Se recibió un nuevo reporte de mensaje que requiere revisión.";

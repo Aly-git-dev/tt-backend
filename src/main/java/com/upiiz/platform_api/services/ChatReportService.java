@@ -5,6 +5,8 @@ import com.upiiz.platform_api.repositories.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.*;
@@ -100,15 +102,32 @@ public class ChatReportService {
         out.conversationId = r.getConversationId();
         out.reportedMessageId = r.getReportedMessageId();
 
-        // 🔥 NOTIFICACIONES SEGURAS (NO ROMPEN EL FLUJO)
-        try {
-            notificationService.notifyMessageReportSent(me, r.getId());
-            notificationService.notifyAdminsMessageReported(r.getId());
-        } catch (Exception e) {
-            System.err.println("⚠️ Error en notificaciones (no rompe reporte): " + e.getMessage());
-        }
+        notifyAfterCommit(me, r.getId());
 
         return out;
+    }
+
+    private void notifyAfterCommit(UUID reporterId, Long reportId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendReportNotifications(reporterId, reportId);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                sendReportNotifications(reporterId, reportId);
+            }
+        });
+    }
+
+    private void sendReportNotifications(UUID reporterId, Long reportId) {
+        try {
+            notificationService.notifyMessageReportSent(reporterId, reportId);
+            notificationService.notifyAdminsMessageReported(reportId);
+        } catch (Exception e) {
+            System.err.println("Error en notificaciones de reporte de mensaje: " + e.getMessage());
+        }
     }
 }
 
