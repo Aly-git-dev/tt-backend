@@ -13,6 +13,8 @@ import java.util.*;
 
 @Service
 public class ChatReportService {
+    private static final String DEFAULT_REASON_CODE = "OTRO";
+    private static final int MAX_REASON_CODE_LENGTH = 30;
 
     private final ChatMessageRepo msgRepo;
     private final ChatConversationRepo convRepo;
@@ -39,8 +41,13 @@ public class ChatReportService {
             throw new IllegalArgumentException("messageId required");
         }
 
-        if (req.reasonCode == null || req.reasonCode.isBlank()) {
-            req.reasonCode = "OTRO"; // 🔥 evita 500 por vacío
+        String rawReasonCode = req.reasonCode == null ? "" : req.reasonCode.trim();
+        String reasonCode = rawReasonCode.isBlank() ? DEFAULT_REASON_CODE : rawReasonCode;
+        String description = req.description;
+
+        if (reasonCode.length() > MAX_REASON_CODE_LENGTH) {
+            description = appendOriginalReason(description, reasonCode);
+            reasonCode = DEFAULT_REASON_CODE;
         }
 
         ChatMessage reported = msgRepo.findById(req.messageId)
@@ -55,8 +62,8 @@ public class ChatReportService {
         r.setReporterId(me);
         r.setConversationId(conv.getId());
         r.setReportedMessageId(reported.getId());
-        r.setReasonCode(req.reasonCode.trim());
-        r.setDescription(req.description);
+        r.setReasonCode(reasonCode);
+        r.setDescription(description);
         r.setStatus("PENDIENTE");
         r.setCreatedAt(Instant.now());
 
@@ -128,6 +135,14 @@ public class ChatReportService {
         } catch (Exception e) {
             System.err.println("Error en notificaciones de reporte de mensaje: " + e.getMessage());
         }
+    }
+
+    private String appendOriginalReason(String description, String originalReason) {
+        String note = "Motivo recibido: " + originalReason;
+        if (description == null || description.isBlank()) {
+            return note;
+        }
+        return description + "\n" + note;
     }
 }
 
