@@ -9,10 +9,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -26,78 +27,93 @@ public class PasswordRecoveryService {
 
     @Transactional
     public void requestPasswordReset(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return;
+        }
 
-        Optional<User> optionalUser = userRepository.findByEmailInst(email);
-
+        var optionalUser = userRepository.findByEmailInstIgnoreCase(normalizedEmail);
         if (optionalUser.isEmpty()) {
             return;
         }
 
         User user = optionalUser.get();
-
-        boolean allowed = user.getRoles().stream()
-                .anyMatch(role -> role.getName().equals("PROFESOR")
-                        || role.getName().equals("ADMIN"));
-
-        if (!allowed) {
+        if (!canUseLocalPasswordReset(user)) {
             return;
         }
 
-        // Invalidar tokens anteriores
-        List<PasswordResetToken> activeTokens =
-                tokenRepository.findByUserAndUsedFalse(user);
-
-        for (PasswordResetToken t : activeTokens) {
-            t.setUsed(true);
+        List<PasswordResetToken> activeTokens = tokenRepository.findByUserAndUsedFalse(user);
+        for (PasswordResetToken activeToken : activeTokens) {
+            activeToken.setUsed(true);
         }
+        tokenRepository.saveAll(activeTokens);
 
-        // Crear nuevo token
+        LocalDateTime now = LocalDateTime.now();
         PasswordResetToken token = PasswordResetToken.builder()
                 .token(UUID.randomUUID().toString())
                 .user(user)
-                .createdAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusMinutes(30))
+                .createdAt(now)
+                .expiresAt(now.plusMinutes(30))
                 .used(false)
                 .build();
 
         tokenRepository.save(token);
 
-        // Enviar correo
-        mailService.sendPasswordResetEmail(
-                user.getEmailInst(),
-                token.getToken()
-        );
+        mailService.sendPasswordResetEmail(user.getEmailInst(), token.getToken());
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-
-        if (!request.newPassword().equals(request.confirmPassword())) {
-            throw new RuntimeException("Las contraseñas no coinciden");
+        if (request == null) {
+            throw new IllegalArgumentException("Solicitud invalida");
         }
 
-        PasswordResetToken token = tokenRepository.findByToken(request.token())
-                .orElseThrow(() -> new RuntimeException("Token inválido"));
+        if (!StringUtils.hasText(request.token())) {
+            throw new IllegalArgumentException("Token invalido");
+        }
+
+        if (!StringUtils.hasText(request.newPassword()) || request.newPassword().length() < 6) {
+            throw new IllegalArgumentException("La contrasena debe tener al menos 6 caracteres");
+        }
+
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException("Las contrasenas no coinciden");
+        }
+
+        PasswordResetToken token = tokenRepository.findByToken(request.token().trim())
+                .orElseThrow(() -> new IllegalArgumentException("Token invalido"));
 
         if (token.isUsed()) {
-            throw new RuntimeException("Token ya usado");
+            throw new IllegalStateException("Token ya usado");
         }
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Token expirado");
+            throw new IllegalStateException("Token expirado");
         }
 
         User user = token.getUser();
-
-        boolean allowed = user.getRoles().stream()
-                .anyMatch(role -> role.getName().equals("PROFESOR")
-                        || role.getName().equals("ADMIN"));
-
-        if (!allowed) {
-            throw new RuntimeException("Usuario no autorizado");
+        if (!canUseLocalPasswordReset(user)) {
+            throw new IllegalStateException("Usuario no autorizado");
         }
 
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         token.setUsed(true);
+
+        userRepository.save(user);
         tokenRepository.save(token);
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean canUseLocalPasswordReset(User user) {
+        return user != null
+                && user.isActive()
+                && "LOCAL".equalsIgnoreCase(user.getAuthProvider())
+                && StringUtils.hasText(user.getPasswordHash());
     }
 }
