@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -128,7 +129,7 @@ public class AuthController {
             @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
     ) {
         try {
-            var res = svc.register(r);
+            var res = svc.register(r, baseUrl);
             return ResponseEntity.status(201).body(res);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
@@ -140,9 +141,16 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody ResendVerificationRequest request) {
+    @Operation(
+            summary = "Reenviar correo de verificacion",
+            description = "Invalida tokens pendientes anteriores y envia un nuevo token de confirmacion al correo institucional."
+    )
+    public ResponseEntity<?> resendVerification(
+            @RequestBody ResendVerificationRequest request,
+            @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
+    ) {
         try {
-            return ResponseEntity.ok(svc.resendVerification(request.emailInst()));
+            return ResponseEntity.ok(svc.resendVerification(request.emailInst(), baseUrl));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (Exception e) {
@@ -382,8 +390,12 @@ public class AuthController {
         try {
             TokensResponse tokens = svc.login(req);
             return ResponseEntity.ok(Map.of("estado", 1, "mensaje", "Usuario autenticado", "tokens", tokens));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(Map.of("estado", 0, "mensaje", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(401).body(Map.of("estado", 0, "mensaje", "Correo o contrasena incorrectos"));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("estado", 0, "mensaje", "Error interno", "error", e.getMessage()));
         }

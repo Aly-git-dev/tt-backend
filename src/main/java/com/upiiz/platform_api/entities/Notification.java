@@ -29,8 +29,8 @@ public class Notification {
     @Column(name = "target_type", length = 20)
     private String targetType;
 
-    @Column(name = "target_id")
-    private UUID targetId;
+    @Column(name = "target_id", length = 80)
+    private String targetId;
 
     @Column(name = "read_at")
     private LocalDateTime readAt;
@@ -49,7 +49,7 @@ public class Notification {
     public String getTitle() { return title; }
     public String getBody() { return body; }
     public String getTargetType() { return targetType; }
-    public UUID getTargetId() { return targetId; }
+    public String getTargetId() { return targetId; }
     public LocalDateTime getReadAt() { return readAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
@@ -58,7 +58,7 @@ public class Notification {
     public void setTitle(String title) { this.title = title; }
     public void setBody(String body) { this.body = body; }
     public void setTargetType(String targetType) { this.targetType = targetType; }
-    public void setTargetId(UUID targetId) { this.targetId = targetId; }
+    public void setTargetId(String targetId) { this.targetId = targetId; }
     public void setReadAt(LocalDateTime readAt) { this.readAt = readAt; }
 
     public boolean isRead() {
@@ -71,7 +71,7 @@ public class Notification {
             String title,
             String body,
             TargetType targetType,
-            UUID targetId
+            Object targetId
     ) {
         Notification n = new Notification();
         n.setUserId(userId);
@@ -79,7 +79,7 @@ public class Notification {
         n.setTitle(title);
         n.setBody(body);
         n.setTargetType(targetType.name());
-        n.setTargetId(targetId);
+        n.setTargetId(targetId == null ? null : targetId.toString());
         return n;
     }
 }

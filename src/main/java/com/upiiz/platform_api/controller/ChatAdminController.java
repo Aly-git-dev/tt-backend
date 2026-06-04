@@ -8,6 +8,9 @@ import com.upiiz.platform_api.entities.ChatReportContext;
 import com.upiiz.platform_api.repositories.ChatMessageReportRepo;
 import com.upiiz.platform_api.repositories.ChatReportContextRepo;
 import com.upiiz.platform_api.security.CurrentUser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -15,6 +18,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/upiiz/admin/v1/admin")
+@Tag(name = "Admin - reportes de chat", description = "Revision y resolucion de reportes de mensajes")
+@SecurityRequirement(name = "bearer-jwt")
 public class ChatAdminController {
 
     private final ChatMessageReportRepo reportRepo;
@@ -30,12 +35,14 @@ public class ChatAdminController {
     }
 
     @GetMapping("/reports")
+    @Operation(summary = "Listar reportes de chat", description = "Lista reportes de mensajes filtrados por estado.")
     public List<ReportSummaryResponse> reports(@RequestParam(defaultValue = "PENDIENTE") String status) {
         requireAdmin();
         return reportRepo.findByStatusOrderByCreatedAtDesc(status).stream().map(this::toSummary).toList();
     }
 
     @GetMapping("/reports/{id}")
+    @Operation(summary = "Detalle de reporte de chat", description = "Obtiene el reporte y el contexto capturado para revision.")
     public ReportDetailResponse reportDetail(@PathVariable Long id) {
         requireAdmin();
         ChatMessageReport r = reportRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -68,6 +75,7 @@ public class ChatAdminController {
     }
 
     @PostMapping("/reports/{id}/resolve")
+    @Operation(summary = "Resolver reporte de chat", description = "Marca un reporte de chat como resuelto.")
     public ReportSummaryResponse resolve(@PathVariable Long id, @RequestBody(required = false) AdminHandleReportRequest req) {
         requireAdmin();
         ChatMessageReport r = reportRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -79,6 +87,7 @@ public class ChatAdminController {
     }
 
     @PostMapping("/reports/{id}/dismiss")
+    @Operation(summary = "Desestimar reporte de chat", description = "Marca un reporte de chat como desestimado.")
     public ReportSummaryResponse dismiss(@PathVariable Long id, @RequestBody(required = false) AdminHandleReportRequest req) {
         requireAdmin();
         ChatMessageReport r = reportRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Report not found"));

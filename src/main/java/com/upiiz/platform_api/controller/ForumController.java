@@ -13,10 +13,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -43,7 +46,7 @@ public class ForumController {
     // =========================================================
     // Crear hilo
     // =========================================================
-    @PostMapping("/threads")
+    @PostMapping(value = "/threads", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Crear un nuevo hilo de foro",
             description = """
@@ -79,7 +82,25 @@ public class ForumController {
                 .body(created);
     }
 
+    @PostMapping(value = "/threads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Crear hilo con archivos adjuntos",
+            description = "Crea un hilo usando una parte JSON llamada thread y una o varias partes files."
+    )
+    public ResponseEntity<ThreadDetailDto> createThreadWithAttachments(
+            @RequestPart("thread") ThreadCreateDto dto,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @Parameter(hidden = true) Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        ThreadDetailDto created = forumService.createThreadWithFiles(dto, email, files);
+        return ResponseEntity
+                .created(URI.create("/upiiz/public/v1/forums/threads/" + created.getId()))
+                .body(created);
+    }
+
     @GetMapping("/threads/search")
+    @Operation(summary = "Buscar hilos", description = "Busca hilos abiertos por texto en titulo, contenido, categoria, subarea o autor.")
     public ResponseEntity<Page<ThreadSummaryDto>> searchThreads(
             @RequestParam(required = false, defaultValue = "") String q,
             @RequestParam(required = false, defaultValue = "0") int page,
@@ -124,7 +145,7 @@ public class ForumController {
     // =========================================================
     // Crear respuesta / comentario en un hilo
     // =========================================================
-    @PostMapping("/threads/{id:\\d+}/posts")
+    @PostMapping(value = "/threads/{id:\\d+}/posts", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Responder a un hilo de foro",
             description = """
@@ -168,6 +189,21 @@ public class ForumController {
         String email = getEmail(auth);
         PostDto created = forumService.createPost(id, dto, email);
         return ResponseEntity.ok(created);
+    }
+
+    @PostMapping(value = "/threads/{id:\\d+}/posts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Responder a un hilo con archivos adjuntos",
+            description = "Crea una respuesta usando una parte JSON llamada post y una o varias partes files."
+    )
+    public ResponseEntity<PostDto> createPostWithAttachments(
+            @PathVariable Long id,
+            @RequestPart("post") PostCreateDto dto,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @Parameter(hidden = true) Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.createPostWithFiles(id, dto, email, files));
     }
 
     // =========================================================
@@ -251,6 +287,7 @@ public class ForumController {
     }
 
     @PutMapping("/threads/{id:\\d+}")
+    @Operation(summary = "Actualizar hilo", description = "Permite al autor o a un administrador modificar los datos de un hilo abierto.")
     public ResponseEntity<ThreadDetailDto> updateThread(
             @PathVariable Long id,
             @RequestBody ThreadUpdateDto dto,
@@ -262,6 +299,7 @@ public class ForumController {
     }
 
     @DeleteMapping("/threads/{id:\\d+}")
+    @Operation(summary = "Cerrar hilo", description = "Cierra un hilo mediante borrado logico.")
     public ResponseEntity<Void> deleteThread(
             @PathVariable Long id,
             Authentication auth
@@ -272,6 +310,7 @@ public class ForumController {
     }
 
     @PutMapping("/posts/{id:\\d+}")
+    @Operation(summary = "Actualizar respuesta", description = "Permite al autor o a un administrador modificar una respuesta visible.")
     public ResponseEntity<PostDto> updatePost(
             @PathVariable Long id,
             @RequestBody PostUpdateDto dto,
@@ -283,6 +322,7 @@ public class ForumController {
     }
 
     @DeleteMapping("/posts/{id:\\d+}")
+    @Operation(summary = "Ocultar respuesta", description = "Oculta una respuesta mediante borrado logico.")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long id,
             Authentication auth
@@ -292,6 +332,7 @@ public class ForumController {
         return ResponseEntity.noContent().build();
     }
     @PostMapping("/threads/{id:\\d+}/like")
+    @Operation(summary = "Dar like a hilo", description = "Registra un like del usuario autenticado sobre un hilo.")
     public ResponseEntity<ThreadDetailDto> likeThread(
             @PathVariable Long id,
             Authentication auth
@@ -301,6 +342,7 @@ public class ForumController {
     }
 
     @DeleteMapping("/threads/{id:\\d+}/like")
+    @Operation(summary = "Quitar like de hilo", description = "Elimina el like del usuario autenticado sobre un hilo.")
     public ResponseEntity<ThreadDetailDto> unlikeThread(
             @PathVariable Long id,
             Authentication auth
@@ -310,6 +352,7 @@ public class ForumController {
     }
 
     @PostMapping("/posts/{id:\\d+}/like")
+    @Operation(summary = "Dar like a respuesta", description = "Registra un like del usuario autenticado sobre una respuesta.")
     public ResponseEntity<PostDto> likePost(
             @PathVariable Long id,
             Authentication auth
@@ -319,6 +362,7 @@ public class ForumController {
     }
 
     @DeleteMapping("/posts/{id:\\d+}/like")
+    @Operation(summary = "Quitar like de respuesta", description = "Elimina el like del usuario autenticado sobre una respuesta.")
     public ResponseEntity<PostDto> unlikePost(
             @PathVariable Long id,
             Authentication auth
@@ -327,7 +371,49 @@ public class ForumController {
         return ResponseEntity.ok(forumService.unlikePost(id, email));
     }
 
+    @PostMapping(value = "/threads/{id:\\d+}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Adjuntar archivos a un hilo existente",
+            description = "Permite al autor o a un administrador agregar archivos a un hilo existente."
+    )
+    public ResponseEntity<ThreadDetailDto> addThreadAttachments(
+            @PathVariable Long id,
+            @RequestPart("files") List<MultipartFile> files,
+            Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.addThreadAttachments(id, files, email));
+    }
+
+    @PostMapping(value = "/posts/{id:\\d+}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Adjuntar archivos a una respuesta existente",
+            description = "Permite al autor o a un administrador agregar archivos a una respuesta existente."
+    )
+    public ResponseEntity<PostDto> addPostAttachments(
+            @PathVariable Long id,
+            @RequestPart("files") List<MultipartFile> files,
+            Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        return ResponseEntity.ok(forumService.addPostAttachments(id, files, email));
+    }
+
+    @GetMapping("/attachments/{id:\\d+}/download")
+    @Operation(
+            summary = "Descargar archivo adjunto de foro",
+            description = "Descarga un archivo adjunto subido a un hilo o respuesta de foro."
+    )
+    public ResponseEntity<Resource> downloadAttachment(
+            @PathVariable Long id,
+            Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        return forumService.downloadAttachment(id, email);
+    }
+
     @GetMapping("/threads")
+    @Operation(summary = "Listar hilos abiertos", description = "Devuelve todos los hilos abiertos ordenados por fecha de creacion.")
     public ResponseEntity<List<ThreadSummaryDto>> getAllThreads(Authentication auth) {
         String email = getEmail(auth);
         List<ThreadSummaryDto> threads = forumService.getAllOpenThreads(email);

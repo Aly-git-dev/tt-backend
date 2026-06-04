@@ -4,6 +4,9 @@ import com.upiiz.platform_api.dto.PushSubscriptionRequest;
 import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.services.WebPushService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,6 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/upiiz/public/v1/push")
+@Tag(name = "Push", description = "Clave publica y suscripciones Web Push")
 public class PushSubscriptionController {
 
     private final WebPushService webPushService;
@@ -26,11 +30,14 @@ public class PushSubscriptionController {
     }
 
     @GetMapping("/public-key")
+    @Operation(summary = "Obtener clave publica push", description = "Devuelve la clave publica VAPID para suscripciones del navegador.")
     public ResponseEntity<Map<String, String>> publicKey() {
         return ResponseEntity.ok(Map.of("publicKey", webPushService.getPublicKey()));
     }
 
     @PostMapping("/subscribe")
+    @Operation(summary = "Guardar suscripcion push", description = "Registra o actualiza la suscripcion Web Push del usuario autenticado.")
+    @SecurityRequirement(name = "bearer-jwt")
     public Map<String, String> subscribe(
             Authentication authentication,
             @RequestBody PushSubscriptionRequest request,

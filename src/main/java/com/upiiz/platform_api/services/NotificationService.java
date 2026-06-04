@@ -177,7 +177,7 @@ public class NotificationService {
                 title,
                 body,
                 TargetType.THREAD,
-                null
+                threadId
         ));
 
         sendBrowserPush(userId, title, body, "/forums/" + threadId);
@@ -194,7 +194,7 @@ public class NotificationService {
                 title,
                 body,
                 TargetType.THREAD,
-                null
+                threadId
         ));
 
         sendBrowserPush(userId, title, body, "/forums/" + threadId);
@@ -211,7 +211,7 @@ public class NotificationService {
                 title,
                 body,
                 TargetType.THREAD,
-                null
+                threadId
         ));
 
         sendBrowserPush(userId, title, body, "/forums/" + threadId);

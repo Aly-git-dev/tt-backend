@@ -11,7 +11,9 @@ import com.upiiz.platform_api.repositories.RoleRepository;
 import com.upiiz.platform_api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +59,11 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> register(RegisterRequest r) {
+        return register(r, null);
+    }
+
+    @Transactional
+    public Map<String, Object> register(RegisterRequest r, String verificationBaseUrl) {
         String email = normalizeEmail(r.getEmailInst());
         validateInstitutionalEmail(email);
 
@@ -75,7 +82,7 @@ public class AuthService {
 
         var existing = users.findByEmailInstIgnoreCase(email).orElse(null);
         if (existing != null) {
-            return registerExistingExternalAccount(existing, r, email, role, roleName);
+            return registerExistingExternalAccount(existing, r, email, role, roleName, verificationBaseUrl);
         }
 
         var u = new User();
@@ -89,7 +96,7 @@ public class AuthService {
         u.setRoles(Set.of(role));
         users.save(u);
 
-        sendNewVerificationEmail(u);
+        sendNewVerificationEmail(u, verificationBaseUrl);
 
         return Map.of("estado", 1, "mensaje", "Registro creado. Revisa tu correo para confirmar.");
     }
@@ -99,7 +106,8 @@ public class AuthService {
             RegisterRequest request,
             String email,
             Role role,
-            String roleName
+            String roleName,
+            String verificationBaseUrl
     ) {
         if (isLocalUser(existing) && existing.getPasswordHash() != null && !existing.getPasswordHash().isBlank()) {
             throw new IllegalStateException("El correo ya esta registrado");
@@ -118,13 +126,18 @@ public class AuthService {
         users.save(existing);
 
         invalidatePendingVerificationTokens(existing);
-        sendNewVerificationEmail(existing);
+        sendNewVerificationEmail(existing, verificationBaseUrl);
 
         return Map.of("estado", 1, "mensaje", "Cuenta actualizada. Revisa tu correo para confirmar.");
     }
 
     @Transactional
     public Map<String, Object> resendVerification(String emailInst) {
+        return resendVerification(emailInst, null);
+    }
+
+    @Transactional
+    public Map<String, Object> resendVerification(String emailInst, String verificationBaseUrl) {
         String email = normalizeEmail(emailInst);
         validateInstitutionalEmail(email);
 
@@ -136,18 +149,23 @@ public class AuthService {
         }
 
         invalidatePendingVerificationTokens(user);
-        sendNewVerificationEmail(user);
+        sendNewVerificationEmail(user, verificationBaseUrl);
 
         return Map.of("estado", 1, "mensaje", "Correo de confirmacion reenviado.");
     }
 
-    private void sendNewVerificationEmail(User user) {
+    private void sendNewVerificationEmail(User user, String verificationBaseUrl) {
         var ev = new EmailVerification();
         ev.setUserId(user.getId());
         ev.setExpiresAt(Instant.now().plus(48, ChronoUnit.HOURS));
         EmailVerification saved = emailVerifs.save(ev);
 
-        String link = apiBaseUrl + "/upiiz/public/v1/auth/confirm?token=" + saved.getToken();
+        String baseUrl = normalizeBaseUrl(
+                verificationBaseUrl == null || verificationBaseUrl.isBlank()
+                        ? apiBaseUrl
+                        : verificationBaseUrl
+        );
+        String link = baseUrl + "/upiiz/public/v1/auth/confirm?token=" + saved.getToken();
         mail.sendVerificationEmail(user.getEmailInst(), link);
     }
 
@@ -161,7 +179,16 @@ public class AuthService {
     @Transactional
     public Map<String, Object> confirmEmail(UUID token) {
         var ev = emailVerifs.findById(token).orElseThrow(() -> new IllegalArgumentException("Token invalido"));
-        if (ev.isUsed()) throw new IllegalStateException("Token ya utilizado");
+        if (ev.isUsed()) {
+            var user = users.findById(ev.getUserId()).orElse(null);
+            if (user != null && user.isEmailVerified()) {
+                String message = user.isApproved()
+                        ? "Correo confirmado. Ya puedes iniciar sesion."
+                        : "Correo confirmado. Espera la aprobacion del administrador.";
+                return Map.of("estado", 1, "mensaje", message);
+            }
+            throw new IllegalStateException("Token ya utilizado");
+        }
         if (ev.getExpiresAt().isBefore(Instant.now())) throw new IllegalStateException("Token expirado");
 
         var u = users.findById(ev.getUserId()).orElseThrow();
@@ -196,8 +223,9 @@ public class AuthService {
     }
 
     public TokensResponse login(LoginRequest req) {
-        if (req.username() == null || req.password() == null) {
-            throw new RuntimeException("Faltan credenciales");
+        if (req == null || req.username() == null || req.username().isBlank()
+                || req.password() == null || req.password().isBlank()) {
+            throw new IllegalArgumentException("Correo y contrasena son obligatorios");
         }
 
         String email = normalizeEmail(req.username());
@@ -206,12 +234,16 @@ public class AuthService {
         var local = users.findByEmailInstIgnoreCase(email)
                 .filter(this::isLocalUser)
                 .filter(u -> u.getPasswordHash() != null && !u.getPasswordHash().isBlank())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado. Registrate con tu correo institucional."));
+                .orElseThrow(() -> new BadCredentialsException("Correo o contrasena incorrectos"));
 
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(email, req.password()));
+        try {
+            authManager.authenticate(new UsernamePasswordAuthenticationToken(email, req.password()));
+        } catch (AuthenticationException ex) {
+            throw new BadCredentialsException("Correo o contrasena incorrectos");
+        }
 
-        if (!local.isEmailVerified()) throw new RuntimeException("Debes confirmar tu correo.");
-        if (!local.isApproved()) throw new RuntimeException("Pendiente aprobacion del administrador.");
+        if (!local.isEmailVerified()) throw new IllegalStateException("Debes confirmar tu correo.");
+        if (!local.isApproved()) throw new IllegalStateException("Pendiente aprobacion del administrador.");
         return issue(local);
     }
 
@@ -274,7 +306,9 @@ public class AuthService {
     }
 
     private void invalidatePendingVerificationTokens(User user) {
-        emailVerifs.findByUserIdAndUsedFalse(user.getId()).forEach(token -> token.setUsed(true));
+        var tokens = emailVerifs.findByUserIdAndUsedFalse(user.getId());
+        tokens.forEach(token -> token.setUsed(true));
+        emailVerifs.saveAll(tokens);
     }
 
     private TokensResponse issue(User u) {

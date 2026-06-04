@@ -65,6 +65,11 @@ chat:
     baseDir: ${CHAT_STORAGE_BASE_DIR:/app/data/chat-uploads}
     maxBytes: ${CHAT_STORAGE_MAX_BYTES:104857600}
 
+forum:
+  storage:
+    baseDir: ${FORUM_STORAGE_BASE_DIR:/app/data/forum-uploads}
+    maxBytes: ${FORUM_STORAGE_MAX_BYTES:104857600}
+
 logging:
   level:
     org.springframework.security: INFO

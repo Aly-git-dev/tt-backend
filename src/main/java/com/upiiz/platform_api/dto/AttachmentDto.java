@@ -9,4 +9,7 @@ public class AttachmentDto {
     private Long id;
     private String kind;
     private String url;
+    private String originalName;
+    private String mimeType;
+    private Long sizeBytes;
 }

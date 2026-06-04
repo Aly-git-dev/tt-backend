@@ -6,6 +6,9 @@ import com.upiiz.platform_api.dto.ReportAdminActionDto;
 import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.services.ForumService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +23,8 @@ import java.util.UUID;
 @RequestMapping("/upiiz/admin/v1/forums")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Admin - foros", description = "Moderacion de reportes y usuarios en foros")
+@SecurityRequirement(name = "bearer-jwt")
 public class ForumAdminController {
 
     private final ForumService forumService;
@@ -27,18 +32,21 @@ public class ForumAdminController {
 
     // Lista sólo pendientes (para el dashboard admin)
     @GetMapping("/reports")
+    @Operation(summary = "Listar reportes pendientes", description = "Devuelve los reportes de foro pendientes de revision.")
     public List<AdminReportDto> getPendingReports() {
         return forumService.getPendingReportsForAdmin();
     }
 
     // Lista todos los reportes (histórico)
     @GetMapping("/reports/all")
+    @Operation(summary = "Listar todos los reportes", description = "Devuelve el historial completo de reportes de foro.")
     public List<AdminReportDto> getAllReports() {
         return forumService.getAllReportsForAdmin();
     }
 
     // Resolver un reporte
     @PostMapping("/reports/{id}/resolve")
+    @Operation(summary = "Resolver reporte de foro", description = "Aplica la accion administrativa configurada y marca el reporte como resuelto.")
     public void resolveReport(
             @PathVariable Long id,
             @RequestBody ReportAdminActionDto dto,
@@ -51,6 +59,7 @@ public class ForumAdminController {
 
     // GET /upiiz/api/v1/admin/users/banned
     @GetMapping("/banned")
+    @Operation(summary = "Listar usuarios baneados", description = "Lista usuarios desactivados desde moderacion.")
     public List<AdminUserSummaryDto> getBannedUsers() {
         // Aquí asumo que "baneado" = active = false
         List<User> users = userRepo.findByActiveFalseOrderByNombreAsc();
@@ -68,6 +77,7 @@ public class ForumAdminController {
 
     // POST /upiiz/api/v1/admin/users/{id}/unban
     @PostMapping("/{id}/unban")
+    @Operation(summary = "Desbanear usuario", description = "Reactiva un usuario desactivado por moderacion.")
     public ResponseEntity<Void> unbanUser(@PathVariable UUID id) {
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));

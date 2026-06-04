@@ -7,15 +7,30 @@ import com.upiiz.platform_api.models.PostStatus;
 import com.upiiz.platform_api.models.ReportStatus;
 import com.upiiz.platform_api.models.ThreadType;
 import com.upiiz.platform_api.repositories.*;
+import com.upiiz.platform_api.storage.ForumFileStorage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -33,6 +48,7 @@ public class ForumService {
     private final ThreadVoteRepository threadVoteRepo;
     private final PostVoteRepository postVoteRepo;
     private final NotificationService notificationService;
+    private final ForumFileStorage forumFileStorage;
 
     @Transactional
     public ForumUserSummaryDto getUserSummary(UUID userId) {
@@ -90,9 +106,51 @@ public class ForumService {
         return mapThreadToDetail(saved, List.of(), author);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public ThreadDetailDto createThreadWithFiles(
+            ThreadCreateDto dto,
+            String userEmail,
+            List<MultipartFile> files
+    ) throws IOException {
+        ThreadDetailDto created = createThread(dto, userEmail);
+        if (hasFiles(files)) {
+            return addThreadAttachments(created.getId(), files, userEmail);
+        }
+        return created;
+    }
+
+    @Transactional
+    public ThreadDetailDto addThreadAttachments(
+            Long threadId,
+            List<MultipartFile> files,
+            String userEmail
+    ) throws IOException {
+        User user = findUserByEmail(userEmail);
+        ForumThread thread = threadRepo.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("Hilo no encontrado"));
+
+        validateAuthorOrAdmin(thread.getAuthor().getId(), user);
+
+        if (!hasFiles(files)) {
+            throw new IllegalArgumentException("Debes adjuntar al menos un archivo");
+        }
+
+        for (MultipartFile file : files) {
+            saveUploadedAttachment(thread, null, file);
+        }
+
+        List<PostDto> posts = postRepo.findByThreadIdOrderByCreatedAtAsc(threadId)
+                .stream()
+                .map(p -> mapPostToDto(p, user))
+                .toList();
+
+        return mapThreadToDetail(thread, posts, user);
+    }
+
+    @Transactional
     public ThreadDetailDto getThread(Long id, String userEmail) {
         User user = findUserByEmail(userEmail);
+        threadRepo.incrementViews(id);
 
         ForumThread thread = threadRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Hilo no encontrado"));
@@ -224,6 +282,47 @@ public class ForumService {
         threadRepo.save(thread);
 
         return mapPostToDto(savedPost, author);
+    }
+
+    @Transactional
+    public PostDto createPostWithFiles(
+            Long threadId,
+            PostCreateDto dto,
+            String userEmail,
+            List<MultipartFile> files
+    ) throws IOException {
+        PostDto created = createPost(threadId, dto, userEmail);
+        if (hasFiles(files)) {
+            return addPostAttachments(created.getId(), files, userEmail);
+        }
+        return created;
+    }
+
+    @Transactional
+    public PostDto addPostAttachments(
+            Long postId,
+            List<MultipartFile> files,
+            String userEmail
+    ) throws IOException {
+        User user = findUserByEmail(userEmail);
+        ForumPost post = postRepo.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Comentario no encontrado"));
+
+        validateAuthorOrAdmin(post.getAuthor().getId(), user);
+
+        if (post.getStatus() != PostStatus.VISIBLE) {
+            throw new IllegalStateException("No se puede adjuntar archivo a un comentario oculto");
+        }
+
+        if (!hasFiles(files)) {
+            throw new IllegalArgumentException("Debes adjuntar al menos un archivo");
+        }
+
+        for (MultipartFile file : files) {
+            saveUploadedAttachment(null, post, file);
+        }
+
+        return mapPostToDto(post, user);
     }
 
     @Transactional
@@ -561,11 +660,7 @@ public class ForumService {
     ) {
         List<AttachmentDto> threadAttachments = attachmentRepo.findByThreadId(t.getId())
                 .stream()
-                .map(a -> AttachmentDto.builder()
-                        .id(a.getId())
-                        .kind(a.getKind())
-                        .url(a.getUrl())
-                        .build())
+                .map(this::mapAttachmentToDto)
                 .toList();
 
         boolean likedByMe = currentUser != null &&
@@ -616,11 +711,7 @@ public class ForumService {
     private PostDto mapPostToDto(ForumPost p, User currentUser) {
         List<AttachmentDto> attachments = attachmentRepo.findByPostId(p.getId())
                 .stream()
-                .map(a -> AttachmentDto.builder()
-                        .id(a.getId())
-                        .kind(a.getKind())
-                        .url(a.getUrl())
-                        .build())
+                .map(this::mapAttachmentToDto)
                 .toList();
 
         boolean likedByMe = currentUser != null &&
@@ -679,5 +770,143 @@ public class ForumService {
                 .stream()
                 .map(t -> mapThreadToSummary(t, user))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> downloadAttachment(Long attachmentId, String userEmail) throws MalformedURLException {
+        User user = findUserByEmail(userEmail);
+        ForumAttachment attachment = attachmentRepo.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Adjunto no encontrado"));
+
+        ensureAttachmentVisibleToUser(attachment, user);
+
+        Map<String, String> metadata = parseMetadata(attachment.getMetadata());
+        String storedPath = metadata.get("storagePath");
+        if (storedPath == null || storedPath.isBlank()) {
+            throw new IllegalArgumentException("El adjunto no corresponde a un archivo local");
+        }
+
+        Path path = forumFileStorage.resolve(storedPath);
+        Resource resource = new UrlResource(path.toUri());
+        if (!Files.exists(path) || !resource.exists() || !resource.isReadable()) {
+            throw new IllegalArgumentException("No se pudo leer el archivo adjunto");
+        }
+
+        String mimeType = metadata.getOrDefault("mimeType", "application/octet-stream");
+        String originalName = metadata.getOrDefault("originalName", "archivo");
+
+        return ResponseEntity.ok()
+                .contentType(parseMediaType(mimeType))
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(originalName, StandardCharsets.UTF_8)
+                                .build()
+                                .toString()
+                )
+                .body(resource);
+    }
+
+    private boolean hasFiles(List<MultipartFile> files) {
+        return files != null && files.stream().anyMatch(file -> file != null && !file.isEmpty());
+    }
+
+    private ForumAttachment saveUploadedAttachment(
+            ForumThread thread,
+            ForumPost post,
+            MultipartFile file
+    ) throws IOException {
+        ForumFileStorage.StoredForumFile stored = thread != null
+                ? forumFileStorage.storeForThread(thread.getId(), file)
+                : forumFileStorage.storeForPost(post.getId(), file);
+
+        ForumAttachment attachment = ForumAttachment.builder()
+                .thread(thread)
+                .post(post)
+                .kind(kindFromMime(stored.mimeType()))
+                .url("pending")
+                .metadata(buildFileMetadata(stored))
+                .build();
+
+        attachment = attachmentRepo.save(attachment);
+        attachment.setUrl("/upiiz/public/v1/forums/attachments/" + attachment.getId() + "/download");
+        return attachmentRepo.save(attachment);
+    }
+
+    private String kindFromMime(String mimeType) {
+        String mime = mimeType == null ? "" : mimeType.toLowerCase();
+        if (mime.startsWith("image/")) return "IMAGEN";
+        if (mime.startsWith("video/")) return "VIDEO";
+        if (mime.startsWith("audio/")) return "AUDIO";
+        return "ARCHIVO";
+    }
+
+    private String buildFileMetadata(ForumFileStorage.StoredForumFile stored) {
+        return "storagePath=" + stored.path() + "\n"
+                + "originalName=" + stored.originalName() + "\n"
+                + "mimeType=" + stored.mimeType() + "\n"
+                + "sizeBytes=" + stored.sizeBytes();
+    }
+
+    private Map<String, String> parseMetadata(String metadata) {
+        Map<String, String> values = new HashMap<>();
+        if (metadata == null || metadata.isBlank()) {
+            return values;
+        }
+
+        for (String line : metadata.split("\\R")) {
+            int separator = line.indexOf('=');
+            if (separator <= 0) {
+                continue;
+            }
+            values.put(line.substring(0, separator), line.substring(separator + 1));
+        }
+        return values;
+    }
+
+    private AttachmentDto mapAttachmentToDto(ForumAttachment attachment) {
+        Map<String, String> metadata = parseMetadata(attachment.getMetadata());
+        Long sizeBytes = null;
+        String sizeValue = metadata.get("sizeBytes");
+        if (sizeValue != null && !sizeValue.isBlank()) {
+            try {
+                sizeBytes = Long.parseLong(sizeValue);
+            } catch (NumberFormatException ignored) {
+                sizeBytes = null;
+            }
+        }
+
+        return AttachmentDto.builder()
+                .id(attachment.getId())
+                .kind(attachment.getKind())
+                .url(attachment.getUrl())
+                .originalName(metadata.get("originalName"))
+                .mimeType(metadata.get("mimeType"))
+                .sizeBytes(sizeBytes)
+                .build();
+    }
+
+    private void ensureAttachmentVisibleToUser(ForumAttachment attachment, User user) {
+        ForumThread thread = attachment.getThread();
+        ForumPost post = attachment.getPost();
+
+        if (post != null) {
+            thread = post.getThread();
+            if (post.getStatus() != PostStatus.VISIBLE) {
+                validateAuthorOrAdmin(post.getAuthor().getId(), user);
+            }
+        }
+
+        if (thread != null && thread.getStatus() != ForumStatus.ABIERTO) {
+            validateAuthorOrAdmin(thread.getAuthor().getId(), user);
+        }
+    }
+
+    private MediaType parseMediaType(String mimeType) {
+        try {
+            return MediaType.parseMediaType(mimeType);
+        } catch (Exception ignored) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 }

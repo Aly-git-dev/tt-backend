@@ -4,6 +4,9 @@ import com.upiiz.platform_api.dto.NotificationResponse;
 import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.services.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -14,6 +17,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/upiiz/public/v1/notifications")
+@Tag(name = "Notificaciones", description = "Consulta y lectura de notificaciones del usuario autenticado")
+@SecurityRequirement(name = "bearer-jwt")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -26,6 +31,7 @@ public class NotificationController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar notificaciones", description = "Devuelve notificaciones paginadas del usuario actual.")
     public Page<NotificationResponse> listMine(
             Authentication authentication,
             @RequestParam(defaultValue = "false") boolean unreadOnly,
@@ -36,12 +42,14 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
+    @Operation(summary = "Contar no leidas", description = "Devuelve el numero de notificaciones no leidas.")
     public Map<String, Long> unreadCount(Authentication authentication) {
         UUID userId = resolveUserId(authentication);
         return Map.of("count", notificationService.unreadCount(userId));
     }
 
     @PatchMapping("/{id}/read")
+    @Operation(summary = "Marcar notificacion como leida", description = "Marca una notificacion propia como leida.")
     public NotificationResponse markAsRead(
             Authentication authentication,
             @PathVariable UUID id
@@ -51,6 +59,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/read-all")
+    @Operation(summary = "Marcar todas como leidas", description = "Marca todas las notificaciones propias como leidas.")
     public Map<String, String> markAllAsRead(Authentication authentication) {
         UUID userId = resolveUserId(authentication);
         notificationService.markAllAsRead(userId);

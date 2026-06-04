@@ -8,11 +8,16 @@ import com.upiiz.platform_api.entities.TeacherEvaluation;
 import com.upiiz.platform_api.entities.TopicDifficultyEvent;
 import com.upiiz.platform_api.entities.TopicInterestEvent;
 import com.upiiz.platform_api.services.AnalyticsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/upiiz/private/v1/analytics")
+@Tag(name = "Analitica - eventos", description = "Registro de evaluaciones docentes y eventos de interes o dificultad")
+@SecurityRequirement(name = "bearer-jwt")
 public class AnalyticsInteractionController {
 
     private final AnalyticsService analyticsService;
@@ -22,6 +27,7 @@ public class AnalyticsInteractionController {
     }
 
     @PostMapping("/teacher-evaluations")
+    @Operation(summary = "Registrar evaluacion docente", description = "Guarda una evaluacion de un profesor asociada opcionalmente a una cita.")
     public ResponseEntity<ApiResponse<TeacherEvaluation>> createTeacherEvaluation(
             @RequestBody CreateTeacherEvaluationRequest request
     ) {
@@ -32,6 +38,7 @@ public class AnalyticsInteractionController {
     }
 
     @PostMapping("/topic-interest-events")
+    @Operation(summary = "Registrar interes de tema", description = "Guarda un evento de interes usado por recomendaciones y analitica.")
     public ResponseEntity<ApiResponse<TopicInterestEvent>> createTopicInterestEvent(
             @RequestBody CreateTopicInterestEventRequest request
     ) {
@@ -42,6 +49,7 @@ public class AnalyticsInteractionController {
     }
 
     @PostMapping("/topic-difficulty-events")
+    @Operation(summary = "Registrar dificultad de tema", description = "Guarda un evento de dificultad para analitica academica.")
     public ResponseEntity<ApiResponse<TopicDifficultyEvent>> createTopicDifficultyEvent(
             @RequestBody CreateTopicDifficultyEventRequest request
     ) {

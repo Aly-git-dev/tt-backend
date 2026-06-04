@@ -7,6 +7,9 @@ import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.entities.VideoMeeting;
 import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.services.VideoMeetingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/upiiz/public/v1/video-meetings")
 @RequiredArgsConstructor
+@Tag(name = "Videoconferencias", description = "Creacion, consulta, entrada, salida y cancelacion de videoconferencias")
+@SecurityRequirement(name = "bearer-jwt")
 public class VideoMeetingController {
 
     private final VideoMeetingService videoMeetingService;
@@ -36,6 +41,7 @@ public class VideoMeetingController {
     }
 
     @PostMapping
+    @Operation(summary = "Crear videoconferencia", description = "Crea una sala Jitsi asociada a una cita online.")
     public VideoMeeting create(
             @Valid @RequestBody CreateVideoMeetingRequest request,
             Authentication authentication
@@ -45,6 +51,7 @@ public class VideoMeetingController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener videoconferencia", description = "Devuelve una videoconferencia si el usuario pertenece a la cita.")
     public VideoMeeting getById(
             @PathVariable UUID id,
             Authentication authentication
@@ -54,6 +61,7 @@ public class VideoMeetingController {
     }
 
     @GetMapping("/by-appointment/{appointmentId}")
+    @Operation(summary = "Obtener por cita", description = "Devuelve la videoconferencia asociada a una cita.")
     public VideoMeeting getByAppointment(
             @PathVariable UUID appointmentId,
             Authentication authentication
@@ -63,12 +71,14 @@ public class VideoMeetingController {
     }
 
     @GetMapping("/mine")
+    @Operation(summary = "Listar mis videoconferencias", description = "Lista videoconferencias donde el usuario autenticado es anfitrion.")
     public List<VideoMeeting> getMine(Authentication authentication) {
         UUID currentUserId = getCurrentUserId(authentication);
         return videoMeetingService.getMine(currentUserId);
     }
 
     @PostMapping("/{id}/join")
+    @Operation(summary = "Entrar a videoconferencia", description = "Registra asistencia y devuelve los datos necesarios para entrar a la sala.")
     public JoinVideoMeetingResponse join(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "Usuario") String displayName,
@@ -80,6 +90,7 @@ public class VideoMeetingController {
     }
 
     @PostMapping("/{id}/leave")
+    @Operation(summary = "Salir de videoconferencia", description = "Cierra la sesion activa de asistencia del usuario.")
     public void leave(
             @PathVariable UUID id,
             Authentication authentication
@@ -89,6 +100,7 @@ public class VideoMeetingController {
     }
 
     @PatchMapping("/{id}/cancel")
+    @Operation(summary = "Cancelar videoconferencia", description = "Cancela la videoconferencia si el usuario tiene permisos.")
     public VideoMeeting cancel(
             @PathVariable UUID id,
             @Valid @RequestBody CancelVideoMeetingRequest request,

@@ -5,6 +5,7 @@ import com.upiiz.platform_api.models.ForumStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +21,10 @@ public interface ForumThreadRepository extends JpaRepository<ForumThread, Long> 
     List<ForumThread> findByStatusOrderByCreatedAtDesc(ForumStatus status);
 
     long countByAuthorId(UUID authorId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update ForumThread t set t.views = t.views + 1 where t.id = :id")
+    int incrementViews(@Param("id") Long id);
 
     @Query("""
         select t

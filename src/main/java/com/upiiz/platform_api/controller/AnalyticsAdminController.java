@@ -6,6 +6,9 @@ import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
 import com.upiiz.platform_api.repositories.TeacherImprovementAreaProjection;
 import com.upiiz.platform_api.repositories.TeacherPerformanceProjection;
 import com.upiiz.platform_api.services.AnalyticsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +17,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/upiiz/admin/v1/analytics")
+@Tag(name = "Admin - analitica", description = "Indicadores administrativos de intereses, dificultad y desempeno docente")
+@SecurityRequirement(name = "bearer-jwt")
 public class AnalyticsAdminController {
 
     private final AnalyticsService analyticsService;
@@ -23,6 +28,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/general/interest")
+    @Operation(summary = "Interes por tema", description = "Obtiene la analitica agregada de interes por categoria y subarea.")
     public ResponseEntity<ApiResponse<List<AdminTopicInterestProjection>>> getGeneralInterest() {
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -33,6 +39,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/general/difficulty")
+    @Operation(summary = "Dificultad por tema", description = "Obtiene la analitica agregada de dificultad por categoria y subarea.")
     public ResponseEntity<ApiResponse<List<AdminTopicDifficultyProjection>>> getGeneralDifficulty() {
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -43,6 +50,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/teachers/performance")
+    @Operation(summary = "Desempeno docente", description = "Lista indicadores de evaluaciones, foros, citas y videoconferencias por docente.")
     public ResponseEntity<ApiResponse<List<TeacherPerformanceProjection>>> getTeacherPerformance() {
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -53,6 +61,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/teachers/{teacherId}/performance")
+    @Operation(summary = "Desempeno de un docente", description = "Obtiene los indicadores de un docente especifico.")
     public ResponseEntity<ApiResponse<TeacherPerformanceProjection>> getTeacherPerformanceByTeacher(
             @PathVariable UUID teacherId
     ) {
@@ -65,6 +74,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/teachers/improvement-areas")
+    @Operation(summary = "Areas de mejora docentes", description = "Lista areas de mejora detectadas a partir de eventos de dificultad.")
     public ResponseEntity<ApiResponse<List<TeacherImprovementAreaProjection>>> getTeacherImprovementAreas() {
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -75,6 +85,7 @@ public class AnalyticsAdminController {
     }
 
     @GetMapping("/teachers/{teacherId}/improvement-areas")
+    @Operation(summary = "Areas de mejora de un docente", description = "Lista areas de mejora de un docente especifico.")
     public ResponseEntity<ApiResponse<List<TeacherImprovementAreaProjection>>> getTeacherImprovementAreasByTeacher(
             @PathVariable UUID teacherId
     ) {
