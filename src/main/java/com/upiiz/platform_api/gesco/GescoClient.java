@@ -1,12 +1,14 @@
 package com.upiiz.platform_api.gesco;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Component
+@ConditionalOnProperty(name = "app.gesco.enabled", havingValue = "true")
 public class GescoClient {
 
     private final RestTemplate http;

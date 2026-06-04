@@ -50,7 +50,7 @@ app:
       secret: ${JWT_SECRET}
 
   gesco:
-    enabled: ${GESCO_ENABLED:true}
+    enabled: ${GESCO_ENABLED:false}
     base-url: ${GESCO_BASE_URL:http://148.204.142.2/pump/web/index.php/login}
     token: ${TOKEN:}
     timeout-ms: ${GESCO_TIMEOUT_MS:5000}

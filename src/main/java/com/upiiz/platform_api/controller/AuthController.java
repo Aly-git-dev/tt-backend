@@ -34,11 +34,11 @@ public class AuthController {
         this.svc = svc;
     }
 
-    // ---------- REGISTRO LOCAL (PROFESOR/ADMIN) ----------
+    // ---------- REGISTRO LOCAL (ALUMNO/PROFESOR/ADMIN) ----------
     @PostMapping("/registro")
     @Operation(
             summary = "Registro de usuario local",
-            description = "Registra un nuevo usuario (profesor/admin) en la plataforma y envía correo de confirmación."
+            description = "Registra alumnos con @alumno.ipn.mx y personal con @ipn.mx. Envia correo de confirmacion."
     )
     @ApiResponses({
             @ApiResponse(
@@ -110,10 +110,10 @@ public class AuthController {
                             examples = @ExampleObject(
                                     name = "Ejemplo de registro",
                                     value = "{\n" +
-                                            "  \"emailInst\": \"user@upiiz.ipn.mx\",\n" +
+                                            "  \"emailInst\": \"user@alumno.ipn.mx\",\n" +
                                             "  \"password\": \"Password123!\",\n" +
                                             "  \"fullName\": \"Nombre Apellido\",\n" +
-                                            "  \"role\": \"PROFESOR\"\n" +
+                                            "  \"role\": \"ALUMNO\"\n" +
                                             "}"
                             )
                     )
@@ -371,7 +371,7 @@ public class AuthController {
                             examples = @ExampleObject(
                                     name = "Ejemplo de login",
                                     value = "{\n" +
-                                            "  \"username\": \"user@upiiz.ipn.mx\",\n" +
+                                            "  \"username\": \"user@alumno.ipn.mx\",\n" +
                                             "  \"password\": \"Password123!\"\n" +
                                             "}"
                             )

@@ -59,7 +59,7 @@ public class MeController {
                                             "  \"mensaje\": \"Perfil obtenido correctamente\",\n" +
                                             "  \"usuario\": {\n" +
                                             "    \"id\": \"f6c6c4bb-5320-4f5f-9e21-8d2e1df3a012\",\n" +
-                                            "    \"emailInst\": \"user@upiiz.ipn.mx\",\n" +
+                                            "    \"emailInst\": \"user@ipn.mx\",\n" +
                                             "    \"fullName\": \"Nombre Apellido\",\n" +
                                             "    \"active\": true,\n" +
                                             "    \"bio\": \"Estudiante de Ingeniería en Sistemas en la UPIIZ\",\n" +
@@ -147,7 +147,7 @@ public class MeController {
                                             "  \"usuario\": {\n" +
                                             "    \"id\": \"f6c6c4bb-5320-4f5f-9e21-8d2e1df3a012\",\n" +
                                             "    \"boleta\": \"00000000\",\n" +
-                                            "    \"emailInst\": \"user@upiiz.ipn.mx\",\n" +
+                                            "    \"emailInst\": \"user@ipn.mx\",\n" +
                                             "    \"fullName\": \"Nombre Apellido Actualizado\",\n" +
                                             "    \"programa\": \"SISTEMAS COMPUTACIONALES\",\n" +
                                             "    \"active\": true,\n" +

@@ -62,7 +62,7 @@ public class AdminUserController {
                                             "  \"usuarios\": [\n" +
                                             "    {\n" +
                                             "      \"id\": \"f6c6c4bb-5320-4f5f-9e21-8d2e1df3a012\",\n" +
-                                            "      \"emailInst\": \"user@upiiz.ipn.mx\",\n" +
+                                            "      \"emailInst\": \"user@ipn.mx\",\n" +
                                             "      \"fullName\": \"Nombre Apellido\",\n" +
                                             "      \"active\": true,\n" +
                                             "      \"bio\": null,\n" +
