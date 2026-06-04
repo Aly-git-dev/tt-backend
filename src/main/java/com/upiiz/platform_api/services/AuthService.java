@@ -1,5 +1,6 @@
 package com.upiiz.platform_api.services;
 
+import com.upiiz.platform_api.auth.AuthStatusException;
 import com.upiiz.platform_api.auth.dto.LoginRequest;
 import com.upiiz.platform_api.auth.dto.RegisterRequest;
 import com.upiiz.platform_api.auth.dto.TokensResponse;
@@ -179,32 +180,20 @@ public class AuthService {
     @Transactional
     public Map<String, Object> confirmEmail(UUID token) {
         var ev = emailVerifs.findById(token).orElseThrow(() -> new IllegalArgumentException("Token invalido"));
-        if (ev.isUsed()) {
-            var user = users.findById(ev.getUserId()).orElse(null);
-            if (user != null && user.isEmailVerified()) {
-                String message = user.isApproved()
-                        ? "Correo confirmado. Ya puedes iniciar sesion."
-                        : "Correo confirmado. Espera la aprobacion del administrador.";
-                return Map.of("estado", 1, "mensaje", message);
-            }
-            throw new IllegalStateException("Token ya utilizado");
-        }
-        if (ev.getExpiresAt().isBefore(Instant.now())) throw new IllegalStateException("Token expirado");
-
         var u = users.findById(ev.getUserId()).orElseThrow();
-        u.setEmailVerified(true);
-        if (hasRole(u, "ALUMNO")) {
-            u.setApproved(true);
+
+        if (u.isEmailVerified()) {
+            ev.setUsed(true);
+            emailVerifs.save(ev);
+            return confirmedEmailResponse(u);
         }
-        users.save(u);
 
-        ev.setUsed(true);
-        emailVerifs.save(ev);
+        if (ev.getExpiresAt().isBefore(Instant.now())) {
+            throw new IllegalStateException("Token expirado");
+        }
 
-        String message = u.isApproved()
-                ? "Correo confirmado. Ya puedes iniciar sesion."
-                : "Correo confirmado. Espera la aprobacion del administrador.";
-        return Map.of("estado", 1, "mensaje", message);
+        // Resending marks older links as used; an unexpired link for the same user is still enough proof.
+        return completeEmailConfirmation(u, ev);
     }
 
     @Transactional
@@ -242,8 +231,15 @@ public class AuthService {
             throw new BadCredentialsException("Correo o contrasena incorrectos");
         }
 
-        if (!local.isEmailVerified()) throw new IllegalStateException("Debes confirmar tu correo.");
-        if (!local.isApproved()) throw new IllegalStateException("Pendiente aprobacion del administrador.");
+        if (!local.isActive()) {
+            throw new AuthStatusException("ACCOUNT_INACTIVE", "La cuenta esta desactivada.", "CONTACT_ADMIN");
+        }
+        if (!local.isEmailVerified()) {
+            throw new AuthStatusException("EMAIL_NOT_VERIFIED", "Debes confirmar tu correo.", "RESEND_VERIFICATION");
+        }
+        if (!local.isApproved()) {
+            throw new AuthStatusException("PENDING_APPROVAL", "Pendiente aprobacion del administrador.", "WAIT_ADMIN_APPROVAL");
+        }
         return issue(local);
     }
 
@@ -309,6 +305,27 @@ public class AuthService {
         var tokens = emailVerifs.findByUserIdAndUsedFalse(user.getId());
         tokens.forEach(token -> token.setUsed(true));
         emailVerifs.saveAll(tokens);
+    }
+
+    private Map<String, Object> completeEmailConfirmation(User user, EmailVerification verification) {
+        user.setEmailVerified(true);
+        if (hasRole(user, "ALUMNO")) {
+            user.setApproved(true);
+        }
+        users.save(user);
+
+        verification.setUsed(true);
+        emailVerifs.save(verification);
+        invalidatePendingVerificationTokens(user);
+
+        return confirmedEmailResponse(user);
+    }
+
+    private Map<String, Object> confirmedEmailResponse(User user) {
+        String message = user.isApproved()
+                ? "Correo confirmado. Ya puedes iniciar sesion."
+                : "Correo confirmado. Espera la aprobacion del administrador.";
+        return Map.of("estado", 1, "mensaje", message);
     }
 
     private TokensResponse issue(User u) {

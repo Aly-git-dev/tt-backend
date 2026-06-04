@@ -1,5 +1,6 @@
 package com.upiiz.platform_api.controller;
 
+import com.upiiz.platform_api.auth.AuthStatusException;
 import com.upiiz.platform_api.auth.dto.LoginRequest;
 import com.upiiz.platform_api.auth.dto.RegisterRequest;
 import com.upiiz.platform_api.auth.dto.ResendVerificationRequest;
@@ -146,6 +147,9 @@ public class AuthController {
             @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
     ) {
         try {
+            if (request == null) {
+                throw new IllegalArgumentException("El correo institucional es obligatorio");
+            }
             return ResponseEntity.ok(svc.resendVerification(request.emailInst(), baseUrl));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
@@ -390,8 +394,13 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401).body(Map.of("estado", 0, "mensaje", "Correo o contrasena incorrectos"));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(Map.of("estado", 0, "mensaje", e.getMessage()));
+        } catch (AuthStatusException e) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "estado", 0,
+                    "codigo", e.getCode(),
+                    "mensaje", e.getMessage(),
+                    "accion", e.getAction()
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("estado", 0, "mensaje", "Error interno", "error", e.getMessage()));
         }

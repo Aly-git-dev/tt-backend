@@ -15,7 +15,7 @@ public class AppUserDetailsService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User.withUsername(u.getEmailInst())
                 .password(u.getPasswordHash()==null? "":u.getPasswordHash())
                 .authorities(u.getRoles().stream().map(r->"ROLE_"+r.getName()).toArray(String[]::new))
-                .accountLocked(!u.isActive()).build();
+                .build();
     }
 }
 
