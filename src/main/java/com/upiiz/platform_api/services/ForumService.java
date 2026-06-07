@@ -299,6 +299,29 @@ public class ForumService {
     }
 
     @Transactional
+    public PostDto createPostWithAttachmentParts(
+            Long threadId,
+            String body,
+            Long parentPostId,
+            String userEmail,
+            List<MultipartFile> files
+    ) throws IOException {
+        String trimmedBody = body == null ? "" : body.trim();
+        boolean hasBody = !trimmedBody.isEmpty();
+        boolean hasFiles = hasFiles(files);
+
+        if (!hasBody && !hasFiles) {
+            throw new IllegalArgumentException("Debes enviar texto o al menos un archivo");
+        }
+
+        PostCreateDto dto = new PostCreateDto();
+        dto.setBody(trimmedBody);
+        dto.setParentPostId(parentPostId);
+
+        return createPostWithFiles(threadId, dto, userEmail, files);
+    }
+
+    @Transactional
     public PostDto addPostAttachments(
             Long postId,
             List<MultipartFile> files,

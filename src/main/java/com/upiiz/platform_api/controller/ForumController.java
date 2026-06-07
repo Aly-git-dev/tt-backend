@@ -206,6 +206,23 @@ public class ForumController {
         return ResponseEntity.ok(forumService.createPostWithFiles(id, dto, email, files));
     }
 
+    @PostMapping(value = "/threads/{id:\\d+}/posts/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Responder a un hilo con adjuntos estilo mensajeria",
+            description = "Crea una respuesta usando partes multipart planas: body, parentPostId y files. Permite texto, archivos o ambos."
+    )
+    public ResponseEntity<PostDto> createPostWithAttachmentParts(
+            @PathVariable Long id,
+            @RequestPart(required = false) String body,
+            @RequestPart(required = false) String parentPostId,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @Parameter(hidden = true) Authentication auth
+    ) throws Exception {
+        String email = getEmail(auth);
+        Long parsedParentPostId = parseOptionalLong(parentPostId, "parentPostId");
+        return ResponseEntity.ok(forumService.createPostWithAttachmentParts(id, body, parsedParentPostId, email, files));
+    }
+
     // =========================================================
     // Hilos recomendados para el dashboard
     // =========================================================
@@ -418,5 +435,16 @@ public class ForumController {
         String email = getEmail(auth);
         List<ThreadSummaryDto> threads = forumService.getAllOpenThreads(email);
         return ResponseEntity.ok(threads);
+    }
+
+    private Long parseOptionalLong(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " debe ser numerico");
+        }
     }
 }
