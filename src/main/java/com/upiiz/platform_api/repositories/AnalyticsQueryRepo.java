@@ -12,6 +12,18 @@ public interface AnalyticsQueryRepo extends JpaRepository<TeacherEvaluation, UUI
 
     @Query(value = """
         SELECT
+            banned_users::bigint AS "bannedUsers",
+            active_users::bigint AS "activeUsers",
+            resolved_forum_reports::bigint AS "resolvedForumReports",
+            dismissed_forum_reports::bigint AS "dismissedForumReports",
+            resolved_message_reports::bigint AS "resolvedMessageReports",
+            dismissed_message_reports::bigint AS "dismissedMessageReports"
+        FROM vw_analytics_moderation_summary
+        """, nativeQuery = true)
+    AnalyticsModerationSummaryProjection findModerationSummary();
+
+    @Query(value = """
+        SELECT
             category_id AS "categoryId",
             category_code AS "categoryCode",
             category_name AS "categoryName",

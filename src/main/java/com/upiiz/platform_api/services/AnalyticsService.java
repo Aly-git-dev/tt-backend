@@ -11,6 +11,7 @@ import com.upiiz.platform_api.repositories.AnalyticsQueryRepo;
 import com.upiiz.platform_api.repositories.TeacherEvaluationRepo;
 import com.upiiz.platform_api.repositories.TopicDifficultyEventRepo;
 import com.upiiz.platform_api.repositories.TopicInterestEventRepo;
+import com.upiiz.platform_api.repositories.AnalyticsModerationSummaryProjection;
 import com.upiiz.platform_api.repositories.AdminTopicDifficultyProjection;
 import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
 import com.upiiz.platform_api.repositories.TeacherImprovementAreaProjection;
@@ -131,6 +132,11 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public List<AdminTopicDifficultyProjection> getAdminTopicDifficulty() {
         return analyticsQueryRepo.findAdminTopicDifficulty();
+    }
+
+    @Transactional(readOnly = true)
+    public AnalyticsModerationSummaryProjection getModerationSummary() {
+        return analyticsQueryRepo.findModerationSummary();
     }
 
     @Transactional(readOnly = true)

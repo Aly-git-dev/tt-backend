@@ -57,6 +57,17 @@ public class ForumAdminController {
         forumService.resolveReport(id, dto, adminEmail);
     }
 
+    @PostMapping("/reports/{id}/dismiss")
+    @Operation(summary = "Desestimar reporte de foro", description = "Marca un reporte de foro como desestimado sin ocultar contenido ni banear usuarios.")
+    public void dismissReport(
+            @PathVariable Long id,
+            @RequestBody(required = false) ReportAdminActionDto dto,
+            Principal principal
+    ) {
+        String adminEmail = principal.getName();
+        forumService.dismissReport(id, dto, adminEmail);
+    }
+
     // GET /upiiz/api/v1/admin/users/banned
     @GetMapping("/banned")
     @Operation(summary = "Listar usuarios baneados", description = "Lista usuarios desactivados desde moderacion.")

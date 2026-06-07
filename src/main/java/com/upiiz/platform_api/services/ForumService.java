@@ -603,6 +603,7 @@ public class ForumService {
     @Transactional
     public void resolveReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
         User admin = findUserByEmail(adminEmail);
+        ReportAdminActionDto action = actionDto == null ? new ReportAdminActionDto() : actionDto;
 
         ForumReport report = reportRepo.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado"));
@@ -610,7 +611,7 @@ public class ForumService {
         ForumPost post = report.getPost();
         ForumThread thread = report.getThread();
 
-        if (actionDto.isBanUser()) {
+        if (action.isBanUser()) {
             User toBan;
 
             if (post != null) {
@@ -625,7 +626,7 @@ public class ForumService {
             userRepo.save(toBan);
         }
 
-        if (actionDto.isDeleteContent()) {
+        if (action.isDeleteContent()) {
             if (post != null) {
                 post.setStatus(PostStatus.OCULTO);
                 postRepo.save(post);
@@ -639,8 +640,8 @@ public class ForumService {
         report.setHandledBy(admin);
         report.setHandledAt(Instant.now());
 
-        if (actionDto.getAdminNote() != null && !actionDto.getAdminNote().isBlank()) {
-            report.setDescription(actionDto.getAdminNote());
+        if (action.getAdminNote() != null && !action.getAdminNote().isBlank()) {
+            report.setDescription(action.getAdminNote());
         }
 
         // 🔔 NOTIFICACIÓN: reporte resuelto
@@ -654,6 +655,24 @@ public class ForumService {
 
         if (reportedUser != null) {
             notificationService.notifyForumReportResolved(reportedUser.getId());
+        }
+
+        reportRepo.save(report);
+    }
+
+    @Transactional
+    public void dismissReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
+        User admin = findUserByEmail(adminEmail);
+
+        ForumReport report = reportRepo.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado"));
+
+        report.setStatus(ReportStatus.DESCARTADO);
+        report.setHandledBy(admin);
+        report.setHandledAt(Instant.now());
+
+        if (actionDto != null && actionDto.getAdminNote() != null && !actionDto.getAdminNote().isBlank()) {
+            report.setDescription(actionDto.getAdminNote());
         }
 
         reportRepo.save(report);

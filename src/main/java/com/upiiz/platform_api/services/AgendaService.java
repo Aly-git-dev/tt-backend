@@ -1,5 +1,7 @@
 package com.upiiz.platform_api.services;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.upiiz.platform_api.entities.*;
 import com.upiiz.platform_api.models.*;
 import com.upiiz.platform_api.repositories.AppointmentRepo;
@@ -28,16 +30,15 @@ public class AgendaService {
 
     @Transactional
     public Appointment create(UUID currentUserId, CreateAppointmentCmd cmd) {
-        validateTimes(cmd.startsAt(), cmd.endsAt);
+        validateTimes(cmd.startsAt(), cmd.endsAt());
 
         Appointment a = Appointment.create(currentUserId, cmd.title(), cmd.description(), cmd.modality(), cmd.startsAt(), cmd.endsAt());
         a.addParticipant(currentUserId, ParticipantRole.HOST, RSVPStatus.ACCEPTED);
 
-        var invitees = cmd.inviteeUserIds() == null ? List.<UUID>of() : cmd.inviteeUserIds();
-
-        for (UUID inviteeId : invitees) {
-            // ...
-            if (inviteeId.equals(currentUserId)) continue;
+        for (UUID inviteeId : normalizeInvitees(cmd.inviteeUserIds())) {
+            if (inviteeId.equals(currentUserId)) {
+                continue;
+            }
             a.addParticipant(inviteeId, ParticipantRole.ATTENDEE, RSVPStatus.PENDING);
         }
 
@@ -91,7 +92,34 @@ public class AgendaService {
     // Commands (records)
     public record CreateAppointmentCmd(String title, String description, Modality modality,
                                        LocalDateTime startsAt, LocalDateTime endsAt,
+                                       @JsonAlias({
+                                               "inviteeUserId",
+                                               "invitedUserId",
+                                               "invitedUserIds",
+                                               "guestUserId",
+                                               "guestUserIds",
+                                               "participantUserId",
+                                               "participantUserIds",
+                                               "invitadoUserId",
+                                               "invitadoUserIds",
+                                               "invitados"
+                                       })
+                                       @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
                                        List<UUID> inviteeUserIds) {}
 
     public record RescheduleCmd(LocalDateTime startsAt, LocalDateTime endsAt) {}
+
+    private List<UUID> normalizeInvitees(List<UUID> inviteeUserIds) {
+        if (inviteeUserIds == null || inviteeUserIds.isEmpty()) {
+            return List.of();
+        }
+
+        LinkedHashSet<UUID> uniqueInvitees = new LinkedHashSet<>();
+        for (UUID inviteeId : inviteeUserIds) {
+            if (inviteeId != null) {
+                uniqueInvitees.add(inviteeId);
+            }
+        }
+        return List.copyOf(uniqueInvitees);
+    }
 }

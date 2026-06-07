@@ -1,6 +1,7 @@
 package com.upiiz.platform_api.controller;
 
 import com.upiiz.platform_api.dto.ApiResponse;
+import com.upiiz.platform_api.repositories.AnalyticsModerationSummaryProjection;
 import com.upiiz.platform_api.repositories.AdminTopicDifficultyProjection;
 import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
 import com.upiiz.platform_api.repositories.TeacherImprovementAreaProjection;
@@ -45,6 +46,17 @@ public class AnalyticsAdminController {
                 ApiResponse.success(
                         "Analítica general de dificultad obtenida correctamente",
                         analyticsService.getAdminTopicDifficulty()
+                )
+        );
+    }
+
+    @GetMapping({"/moderation/summary", "/moderation/content-excluded"})
+    @Operation(summary = "Moderacion y contenido excluido", description = "Devuelve conteos separados de usuarios baneados/activos y reportes resueltos o desestimados.")
+    public ResponseEntity<ApiResponse<AnalyticsModerationSummaryProjection>> getModerationSummary() {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Resumen de moderacion obtenido correctamente",
+                        analyticsService.getModerationSummary()
                 )
         );
     }
