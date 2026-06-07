@@ -116,17 +116,10 @@ public class AuthController {
                             )
                     )
             )
-            @RequestBody RegisterRequest r,
-            @Parameter(
-                    description = "URL base de la app cliente para construir enlaces de confirmación. " +
-                            "Si no se envía, se usa http://localhost:8080",
-                    required = false,
-                    example = "https://platform-upiiz.dev"
-            )
-            @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
+            @RequestBody RegisterRequest r
     ) {
         try {
-            var res = svc.register(r, baseUrl);
+            var res = svc.register(r);
             return ResponseEntity.status(201).body(res);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
@@ -143,14 +136,13 @@ public class AuthController {
             description = "Invalida tokens pendientes anteriores y envia un nuevo token de confirmacion al correo institucional."
     )
     public ResponseEntity<?> resendVerification(
-            @RequestBody ResendVerificationRequest request,
-            @RequestHeader(value = "X-App-BaseUrl", required = false) String baseUrl
+            @RequestBody ResendVerificationRequest request
     ) {
         try {
             if (request == null) {
                 throw new IllegalArgumentException("El correo institucional es obligatorio");
             }
-            return ResponseEntity.ok(svc.resendVerification(request.emailInst(), baseUrl));
+            return ResponseEntity.ok(svc.resendVerification(request.emailInst()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("estado", 0, "mensaje", e.getMessage()));
         } catch (Exception e) {

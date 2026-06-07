@@ -2,6 +2,7 @@ package com.upiiz.platform_api.services;
 
 import com.upiiz.platform_api.auth.AuthStatusException;
 import com.upiiz.platform_api.auth.dto.LoginRequest;
+import com.upiiz.platform_api.auth.dto.RegisterRequest;
 import com.upiiz.platform_api.entities.EmailVerification;
 import com.upiiz.platform_api.entities.Role;
 import com.upiiz.platform_api.entities.User;
@@ -108,6 +109,41 @@ class AuthServiceTest {
 
         assertEquals("ACCOUNT_INACTIVE", ex.getCode());
         assertEquals("CONTACT_ADMIN", ex.getAction());
+    }
+
+    @Test
+    void registerBuildsConfirmationLinkWithConfiguredApiUrl() {
+        UUID token = UUID.randomUUID();
+        Role role = Role.builder().name("ALUMNO").build();
+        RegisterRequest request = RegisterRequest.builder()
+                .emailInst("USER@ALUMNO.IPN.MX")
+                .fullName("User Test")
+                .password("secret123")
+                .role("ALUMNO")
+                .build();
+
+        when(roles.findByName("ALUMNO")).thenReturn(role);
+        when(users.findByEmailInstIgnoreCase("user@alumno.ipn.mx")).thenReturn(Optional.empty());
+        when(encoder.encode("secret123")).thenReturn("hash");
+        when(users.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getId() == null) {
+                user.setId(UUID.randomUUID());
+            }
+            return user;
+        });
+        when(emailVerifs.save(any(EmailVerification.class))).thenAnswer(invocation -> {
+            EmailVerification verification = invocation.getArgument(0);
+            verification.setToken(token);
+            return verification;
+        });
+
+        service.register(request);
+
+        verify(mail).sendVerificationEmail(
+                "user@alumno.ipn.mx",
+                "https://api.example/upiiz/public/v1/auth/confirm?token=" + token
+        );
     }
 
     @Test

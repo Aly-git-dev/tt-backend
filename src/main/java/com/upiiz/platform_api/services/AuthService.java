@@ -60,11 +60,6 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> register(RegisterRequest r) {
-        return register(r, null);
-    }
-
-    @Transactional
-    public Map<String, Object> register(RegisterRequest r, String verificationBaseUrl) {
         String email = normalizeEmail(r.getEmailInst());
         validateInstitutionalEmail(email);
 
@@ -83,7 +78,7 @@ public class AuthService {
 
         var existing = users.findByEmailInstIgnoreCase(email).orElse(null);
         if (existing != null) {
-            return registerExistingExternalAccount(existing, r, email, role, roleName, verificationBaseUrl);
+            return registerExistingExternalAccount(existing, r, email, role, roleName);
         }
 
         var u = new User();
@@ -97,7 +92,7 @@ public class AuthService {
         u.setRoles(Set.of(role));
         users.save(u);
 
-        sendNewVerificationEmail(u, verificationBaseUrl);
+        sendNewVerificationEmail(u);
 
         return Map.of("estado", 1, "mensaje", "Registro creado. Revisa tu correo para confirmar.");
     }
@@ -107,8 +102,7 @@ public class AuthService {
             RegisterRequest request,
             String email,
             Role role,
-            String roleName,
-            String verificationBaseUrl
+            String roleName
     ) {
         if (isLocalUser(existing) && existing.getPasswordHash() != null && !existing.getPasswordHash().isBlank()) {
             throw new IllegalStateException("El correo ya esta registrado");
@@ -127,18 +121,13 @@ public class AuthService {
         users.save(existing);
 
         invalidatePendingVerificationTokens(existing);
-        sendNewVerificationEmail(existing, verificationBaseUrl);
+        sendNewVerificationEmail(existing);
 
         return Map.of("estado", 1, "mensaje", "Cuenta actualizada. Revisa tu correo para confirmar.");
     }
 
     @Transactional
     public Map<String, Object> resendVerification(String emailInst) {
-        return resendVerification(emailInst, null);
-    }
-
-    @Transactional
-    public Map<String, Object> resendVerification(String emailInst, String verificationBaseUrl) {
         String email = normalizeEmail(emailInst);
         validateInstitutionalEmail(email);
 
@@ -150,23 +139,18 @@ public class AuthService {
         }
 
         invalidatePendingVerificationTokens(user);
-        sendNewVerificationEmail(user, verificationBaseUrl);
+        sendNewVerificationEmail(user);
 
         return Map.of("estado", 1, "mensaje", "Correo de confirmacion reenviado.");
     }
 
-    private void sendNewVerificationEmail(User user, String verificationBaseUrl) {
+    private void sendNewVerificationEmail(User user) {
         var ev = new EmailVerification();
         ev.setUserId(user.getId());
         ev.setExpiresAt(Instant.now().plus(48, ChronoUnit.HOURS));
         EmailVerification saved = emailVerifs.save(ev);
 
-        String baseUrl = normalizeBaseUrl(
-                verificationBaseUrl == null || verificationBaseUrl.isBlank()
-                        ? apiBaseUrl
-                        : verificationBaseUrl
-        );
-        String link = baseUrl + "/upiiz/public/v1/auth/confirm?token=" + saved.getToken();
+        String link = apiBaseUrl + "/upiiz/public/v1/auth/confirm?token=" + saved.getToken();
         mail.sendVerificationEmail(user.getEmailInst(), link);
     }
 
