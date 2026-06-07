@@ -3,6 +3,7 @@ package com.upiiz.platform_api.controller;
 import com.upiiz.platform_api.dto.CancelVideoMeetingRequest;
 import com.upiiz.platform_api.dto.CreateVideoMeetingRequest;
 import com.upiiz.platform_api.dto.JoinVideoMeetingResponse;
+import com.upiiz.platform_api.dto.VideoMeetingParticipantResponse;
 import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.entities.VideoMeeting;
 import com.upiiz.platform_api.repositories.UserRepository;
@@ -78,15 +79,24 @@ public class VideoMeetingController {
     }
 
     @PostMapping("/{id}/join")
-    @Operation(summary = "Entrar a videoconferencia", description = "Registra asistencia y devuelve los datos necesarios para entrar a la sala.")
+    @Operation(summary = "Entrar a videoconferencia", description = "Registra asistencia y devuelve los datos necesarios para embeber Jitsi dentro de la app.")
     public JoinVideoMeetingResponse join(
             @PathVariable UUID id,
-            @RequestParam(defaultValue = "Usuario") String displayName,
             @RequestParam(required = false) String deviceInfo,
             Authentication authentication
     ) {
         UUID currentUserId = getCurrentUserId(authentication);
-        return videoMeetingService.join(id, currentUserId, displayName, deviceInfo);
+        return videoMeetingService.join(id, currentUserId, deviceInfo);
+    }
+
+    @GetMapping("/{id}/participants")
+    @Operation(summary = "Listar participantes activos", description = "Devuelve nombre, foto de perfil y rol de los usuarios actualmente dentro de la videollamada.")
+    public List<VideoMeetingParticipantResponse> participants(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        UUID currentUserId = getCurrentUserId(authentication);
+        return videoMeetingService.getActiveParticipants(id, currentUserId);
     }
 
     @PostMapping("/{id}/leave")
@@ -97,6 +107,16 @@ public class VideoMeetingController {
     ) {
         UUID currentUserId = getCurrentUserId(authentication);
         videoMeetingService.leave(id, currentUserId);
+    }
+
+    @PostMapping("/{id}/end")
+    @Operation(summary = "Finalizar videoconferencia", description = "Finaliza la videoconferencia para todos si el usuario es anfitrion y marca la cita como finalizada en agenda.")
+    public VideoMeeting end(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        UUID currentUserId = getCurrentUserId(authentication);
+        return videoMeetingService.end(id, currentUserId);
     }
 
     @PatchMapping("/{id}/cancel")

@@ -46,8 +46,8 @@ app:
   security:
     jwt:
       issuer: upiiz-platform
-      access-exp-min: ${JWT_ACCESS_EXP_MIN:15}
-      refresh-exp-days: ${JWT_REFRESH_EXP_DAYS:14}
+      access-exp-min: ${JWT_ACCESS_EXP_MIN:43200}
+      refresh-exp-days: ${JWT_REFRESH_EXP_DAYS:30}
       secret: ${JWT_SECRET}
 
   gesco:

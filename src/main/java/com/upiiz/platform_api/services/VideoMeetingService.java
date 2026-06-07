@@ -3,7 +3,9 @@ package com.upiiz.platform_api.services;
 import com.upiiz.platform_api.dto.CancelVideoMeetingRequest;
 import com.upiiz.platform_api.dto.CreateVideoMeetingRequest;
 import com.upiiz.platform_api.dto.JoinVideoMeetingResponse;
+import com.upiiz.platform_api.dto.VideoMeetingParticipantResponse;
 import com.upiiz.platform_api.entities.Appointment;
+import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.entities.VideoMeeting;
 import com.upiiz.platform_api.entities.VideoMeetingAttendance;
 import com.upiiz.platform_api.models.AppointmentStatus;
@@ -12,6 +14,7 @@ import com.upiiz.platform_api.models.VideoMeetingRole;
 import com.upiiz.platform_api.models.VideoMeetingStatus;
 import com.upiiz.platform_api.repositories.AppointmentParticipantRepo;
 import com.upiiz.platform_api.repositories.AppointmentRepo;
+import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.repositories.VideoMeetingAttendanceRepo;
 import com.upiiz.platform_api.repositories.VideoMeetingRepo;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +40,7 @@ public class VideoMeetingService {
     private final VideoMeetingRepo videoMeetingRepo;
     private final VideoMeetingAttendanceRepo videoMeetingAttendanceRepo;
     private final VideoMeetingRoomNameGenerator roomNameGenerator;
+    private final UserRepository userRepository;
 
     @Transactional
     public VideoMeeting create(CreateVideoMeetingRequest request, UUID currentUserId) {
@@ -61,6 +68,13 @@ public class VideoMeetingService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "No se puede crear videoconferencia para una cita cancelada"
+            );
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede crear videoconferencia para una cita finalizada"
             );
         }
 
@@ -136,11 +150,17 @@ public class VideoMeetingService {
     }
 
     @Transactional
-    public JoinVideoMeetingResponse join(UUID meetingId, UUID currentUserId, String displayName, String deviceInfo) {
+    public JoinVideoMeetingResponse join(UUID meetingId, UUID currentUserId, String deviceInfo) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Videoconferencia no encontrada"
+                ));
+
+        Appointment appointment = appointmentRepo.findById(vm.getAppointmentId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "La cita no existe"
                 ));
 
         boolean belongs = appointmentParticipantRepo
@@ -150,6 +170,20 @@ public class VideoMeetingService {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "No perteneces a esta cita"
+            );
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La cita fue cancelada"
+            );
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La cita ya fue finalizada"
             );
         }
 
@@ -174,6 +208,12 @@ public class VideoMeetingService {
                 ? VideoMeetingRole.HOST
                 : VideoMeetingRole.PARTICIPANT;
 
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuario autenticado no encontrado"
+                ));
+
         VideoMeetingAttendance attendance = VideoMeetingAttendance.create(
                 vm.getId(),
                 currentUserId,
@@ -189,8 +229,55 @@ public class VideoMeetingService {
                 JITSI_DOMAIN,
                 vm.getRoomName(),
                 vm.getMeetingUrl(),
-                displayName
+                resolveDisplayName(currentUser),
+                currentUser.getId(),
+                currentUser.getAvatarUrl(),
+                role.name(),
+                role == VideoMeetingRole.HOST,
+                true,
+                "/video-meetings/" + vm.getId() + "/room"
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<VideoMeetingParticipantResponse> getActiveParticipants(UUID meetingId, UUID currentUserId) {
+        VideoMeeting vm = videoMeetingRepo.findById(meetingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
+
+        boolean belongs = appointmentParticipantRepo
+                .existsByAppointment_IdAndUserId(vm.getAppointmentId(), currentUserId);
+
+        if (!belongs && !vm.getCreatedBy().equals(currentUserId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "No tienes acceso a esta videoconferencia"
+            );
+        }
+
+        List<VideoMeetingAttendance> activeAttendances =
+                videoMeetingAttendanceRepo.findByVideoMeetingIdAndLeftAtIsNull(meetingId);
+
+        Map<UUID, User> usersById = userRepository.findAllById(
+                        activeAttendances.stream().map(VideoMeetingAttendance::getUserId).toList()
+                )
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        return activeAttendances.stream()
+                .map(a -> {
+                    User user = usersById.get(a.getUserId());
+                    return new VideoMeetingParticipantResponse(
+                            a.getUserId(),
+                            resolveDisplayName(user),
+                            user == null ? null : user.getAvatarUrl(),
+                            a.getRoleInMeeting().name(),
+                            a.getJoinedAt()
+                    );
+                })
+                .toList();
     }
 
     @Transactional
@@ -219,6 +306,49 @@ public class VideoMeetingService {
     }
 
     @Transactional
+    public VideoMeeting end(UUID meetingId, UUID currentUserId) {
+        VideoMeeting vm = videoMeetingRepo.findById(meetingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Videoconferencia no encontrada"
+                ));
+
+        if (!vm.getHostUserId().equals(currentUserId) && !vm.getCreatedBy().equals(currentUserId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Solo el anfitrión puede finalizar esta videoconferencia"
+            );
+        }
+
+        if (vm.getStatus() == VideoMeetingStatus.CANCELLED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La videoconferencia fue cancelada"
+            );
+        }
+
+        closeOpenSessions(meetingId);
+
+        if (vm.getStatus() != VideoMeetingStatus.ENDED) {
+            vm.end();
+            vm = videoMeetingRepo.save(vm);
+        }
+
+        Appointment appointment = appointmentRepo.findById(vm.getAppointmentId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "La cita no existe"
+                ));
+
+        if (appointment.getStatus() == AppointmentStatus.SCHEDULED) {
+            appointment.complete();
+            appointmentRepo.save(appointment);
+        }
+
+        return vm;
+    }
+
+    @Transactional
     public VideoMeeting cancel(UUID meetingId, CancelVideoMeetingRequest request, UUID currentUserId) {
         VideoMeeting vm = videoMeetingRepo.findById(meetingId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -235,5 +365,21 @@ public class VideoMeetingService {
 
         vm.cancel(currentUserId, request.reason());
         return videoMeetingRepo.save(vm);
+    }
+
+    private void closeOpenSessions(UUID meetingId) {
+        List<VideoMeetingAttendance> openAttendances =
+                videoMeetingAttendanceRepo.findByVideoMeetingIdAndLeftAtIsNull(meetingId);
+
+        openAttendances.forEach(VideoMeetingAttendance::closeSession);
+        videoMeetingAttendanceRepo.saveAll(openAttendances);
+    }
+
+    private String resolveDisplayName(User user) {
+        if (user == null || user.getNombre() == null || user.getNombre().isBlank()) {
+            return "Usuario";
+        }
+
+        return user.getNombre();
     }
 }

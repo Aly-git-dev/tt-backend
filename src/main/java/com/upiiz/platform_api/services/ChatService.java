@@ -35,6 +35,7 @@ public class ChatService {
     private final ChatFileStorage storage;
     private final UserRoleNativeRepo userRoleRepo;
     private final UserRepository userRepo;
+    private final NotificationService notificationService;
 
     public ChatService(
             ChatConversationRepo convRepo,
@@ -44,7 +45,8 @@ public class ChatService {
             ChatModerationService moderation,
             ChatFileStorage storage,
             UserRoleNativeRepo userRoleRepo,
-            UserRepository userRepo
+            UserRepository userRepo,
+            NotificationService notificationService
     ) {
         this.convRepo = convRepo;
         this.msgRepo = msgRepo;
@@ -54,6 +56,7 @@ public class ChatService {
         this.storage = storage;
         this.userRoleRepo = userRoleRepo;
         this.userRepo = userRepo;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -125,6 +128,8 @@ public class ChatService {
         c.setLastMessageAt(m.getCreatedAt() != null ? m.getCreatedAt() : Instant.now());
         convRepo.save(c);
 
+        notifyRecipientOfNewMessage(c, me);
+
         return toMessageResponse(m, List.of());
     }
 
@@ -181,6 +186,8 @@ public class ChatService {
 
         c.setLastMessageAt(m.getCreatedAt() != null ? m.getCreatedAt() : Instant.now());
         convRepo.save(c);
+
+        notifyRecipientOfNewMessage(c, me);
 
         return toMessageResponse(m, saved);
     }
@@ -336,6 +343,15 @@ public class ChatService {
 
     private String resolveOtherUserAvatar(UUID otherUserId) {
         return null;
+    }
+
+    private void notifyRecipientOfNewMessage(ChatConversation conversation, UUID senderId) {
+        UUID recipientId = access.otherUser(conversation, senderId);
+        String senderName = userRepo.findById(senderId)
+                .map(u -> u.getNombre() == null || u.getNombre().isBlank() ? "Alguien" : u.getNombre())
+                .orElse("Alguien");
+
+        notificationService.notifyNewChatMessage(recipientId, senderName, conversation.getId());
     }
 
     public List<UserSearchResponse> searchUsers(String query) {

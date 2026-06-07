@@ -8,5 +8,11 @@ public record JoinVideoMeetingResponse(
         String domain,
         String roomName,
         String meetingUrl,
-        String displayName
+        String displayName,
+        UUID userId,
+        String avatarUrl,
+        String role,
+        boolean host,
+        boolean embedded,
+        String appPath
 ) {}

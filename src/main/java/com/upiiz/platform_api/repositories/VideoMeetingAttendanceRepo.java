@@ -11,6 +11,8 @@ public interface VideoMeetingAttendanceRepo extends JpaRepository<VideoMeetingAt
 
     List<VideoMeetingAttendance> findByVideoMeetingId(UUID videoMeetingId);
 
+    List<VideoMeetingAttendance> findByVideoMeetingIdAndLeftAtIsNull(UUID videoMeetingId);
+
     Optional<VideoMeetingAttendance> findTopByVideoMeetingIdAndUserIdAndLeftAtIsNullOrderByJoinedAtDesc(
             UUID videoMeetingId,
             UUID userId

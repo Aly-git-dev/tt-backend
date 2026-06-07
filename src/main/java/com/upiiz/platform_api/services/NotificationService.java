@@ -252,7 +252,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public void notifyNewChatMessage(UUID userId, String senderName, UUID conversationId) {
+    public void notifyNewChatMessage(UUID userId, String senderName, Long conversationId) {
         String title = "Nuevo mensaje";
         String body = senderName + " te envió un mensaje";
 

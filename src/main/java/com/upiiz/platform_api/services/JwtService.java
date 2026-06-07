@@ -16,6 +16,9 @@ import java.util.Map;
 @Service
 public class JwtService {
 
+    static final long MAX_ACCESS_MINUTES = 30L * 24L * 60L;
+    static final long MAX_REFRESH_DAYS = 30L;
+
     private final String secret;         // base64 preferido
     private final String issuer;
     private final long accessMinutes;
@@ -31,8 +34,8 @@ public class JwtService {
     ) {
         this.secret = secret;
         this.issuer = issuer;
-        this.accessMinutes = accessMinutes;
-        this.refreshDays = refreshDays;
+        this.accessMinutes = clamp(accessMinutes, 1, MAX_ACCESS_MINUTES);
+        this.refreshDays = clamp(refreshDays, 1, MAX_REFRESH_DAYS);
     }
 
     @PostConstruct
@@ -47,27 +50,33 @@ public class JwtService {
     }
 
     public String access(Map<String,Object> claims, String subject){
+        Instant now = Instant.now();
         return Jwts.builder()
                 .issuer(issuer)
                 .subject(subject)
                 .claims(claims)
-                .issuedAt(java.util.Date.from(Instant.now()))
-                .expiration(java.util.Date.from(Instant.now().plus(accessMinutes, ChronoUnit.MINUTES)))
+                .issuedAt(java.util.Date.from(now))
+                .expiration(java.util.Date.from(now.plus(accessMinutes, ChronoUnit.MINUTES)))
                 .signWith(key)
                 .compact();
     }
 
     public String refresh(String subject){
+        Instant now = Instant.now();
         return Jwts.builder()
                 .issuer(issuer)
                 .subject(subject)
-                .issuedAt(java.util.Date.from(Instant.now()))
-                .expiration(java.util.Date.from(Instant.now().plus(refreshDays, ChronoUnit.DAYS)))
+                .issuedAt(java.util.Date.from(now))
+                .expiration(java.util.Date.from(now.plus(refreshDays, ChronoUnit.DAYS)))
                 .signWith(key)
                 .compact();
     }
 
     public String subject(String token){
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject();
+    }
+
+    private long clamp(long value, long min, long max) {
+        return Math.min(Math.max(value, min), max);
     }
 }

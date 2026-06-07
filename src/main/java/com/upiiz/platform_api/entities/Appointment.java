@@ -87,6 +87,11 @@ public class Appointment {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void complete() {
+        this.status = AppointmentStatus.COMPLETED;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // getters (o Lombok si usas)
     public UUID getId() { return id; }
     public UUID getCreatedBy() { return createdBy; }
