@@ -6,7 +6,6 @@ import com.upiiz.platform_api.entities.ChatConversation;
 import com.upiiz.platform_api.entities.ChatMessage;
 import com.upiiz.platform_api.repositories.*;
 import com.upiiz.platform_api.storage.ChatFileStorage;
-import org.apache.catalina.User;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,6 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.*;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @Service
 public class ChatService {
@@ -311,9 +309,22 @@ public class ChatService {
                 .collect(Collectors.toSet());
     }
 
-    private String computeAllowedPairOrThrow(UUID me, UUID other) {
-        var meRoles = currentRolesFromAuth();
+    private Set<String> rolesForCurrentUser(UUID userId) {
+        Set<String> roles = rolesOfUser(userId);
+        return roles.isEmpty() ? currentRolesFromAuth() : roles;
+    }
+
+    private boolean hasFunctionalChatRole(Set<String> roles) {
+        return roles.contains("PROFESOR") || roles.contains("ALUMNO") || roles.contains("ASESOR");
+    }
+
+    String computeAllowedPairOrThrow(UUID me, UUID other) {
+        var meRoles = rolesForCurrentUser(me);
         var otherRoles = rolesOfUser(other);
+
+        if (meRoles.contains("ADMIN") && !hasFunctionalChatRole(meRoles)) {
+            throw new AccessDeniedException("El administrador necesita tambien un rol academico para iniciar chats");
+        }
 
         boolean meProfesor = meRoles.contains("PROFESOR");
         boolean meAlumno   = meRoles.contains("ALUMNO");

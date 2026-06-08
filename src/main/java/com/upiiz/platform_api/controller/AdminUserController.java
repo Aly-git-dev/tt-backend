@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@CrossOrigin(origins = "http://148.204.142.20:3030")
 @RestController
 @RequestMapping("/upiiz/admin/v1")
 @Tag(

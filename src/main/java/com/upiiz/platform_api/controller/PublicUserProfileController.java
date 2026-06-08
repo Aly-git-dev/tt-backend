@@ -17,7 +17,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/upiiz/public/v1/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://148.204.142.20:3030")
 @Tag(name = "Perfiles publicos", description = "Consulta de perfiles publicos de usuarios")
 @SecurityRequirement(name = "bearer-jwt")
 public class PublicUserProfileController {
