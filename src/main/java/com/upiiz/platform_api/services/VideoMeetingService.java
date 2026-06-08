@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class VideoMeetingService {
 
     private static final String JITSI_DOMAIN = "meet.jit.si";
+    private static final String JITSI_EXTERNAL_API_URL = "https://meet.jit.si/external_api.js";
 
     private final AppointmentRepo appointmentRepo;
     private final AppointmentParticipantRepo appointmentParticipantRepo;
@@ -41,6 +42,7 @@ public class VideoMeetingService {
     private final VideoMeetingAttendanceRepo videoMeetingAttendanceRepo;
     private final VideoMeetingRoomNameGenerator roomNameGenerator;
     private final UserRepository userRepository;
+    private final JaasJwtService jaasJwtService;
 
     @Transactional
     public VideoMeeting create(CreateVideoMeetingRequest request, UUID currentUserId) {
@@ -89,7 +91,7 @@ public class VideoMeetingService {
         }
 
         String roomName = roomNameGenerator.generate(appointment.getTitle(), appointment.getId());
-        String meetingUrl = "https://" + JITSI_DOMAIN + "/" + roomName;
+        String meetingUrl = meetingUrl(roomName);
 
         VideoMeeting vm = VideoMeeting.create(
                 appointment.getId(),
@@ -223,19 +225,28 @@ public class VideoMeetingService {
 
         videoMeetingAttendanceRepo.save(attendance);
 
+        String roomName = iframeRoomName(vm.getRoomName());
+        String meetingUrl = meetingUrl(vm.getRoomName());
+        String jwt = jaasJwtService.isEnabled()
+                ? jaasJwtService.createToken(currentUser, role == VideoMeetingRole.HOST, vm.getRoomName())
+                : null;
+
         return new JoinVideoMeetingResponse(
                 vm.getId(),
                 vm.getProvider().name(),
-                JITSI_DOMAIN,
-                vm.getRoomName(),
-                vm.getMeetingUrl(),
+                domain(),
+                roomName,
+                meetingUrl,
                 resolveDisplayName(currentUser),
                 currentUser.getId(),
                 currentUser.getAvatarUrl(),
                 role.name(),
                 role == VideoMeetingRole.HOST,
                 true,
-                "/video-meetings/" + vm.getId() + "/room"
+                "/video-meetings/" + vm.getId() + "/room",
+                jwt,
+                externalApiUrl(),
+                jaasJwtService.isEnabled() ? jaasJwtService.appId() : null
         );
     }
 
@@ -381,5 +392,23 @@ public class VideoMeetingService {
         }
 
         return user.getNombre();
+    }
+
+    private String domain() {
+        return jaasJwtService.isEnabled() ? jaasJwtService.domain() : JITSI_DOMAIN;
+    }
+
+    private String iframeRoomName(String roomName) {
+        return jaasJwtService.isEnabled() ? jaasJwtService.fullRoomName(roomName) : roomName;
+    }
+
+    private String meetingUrl(String roomName) {
+        return jaasJwtService.isEnabled()
+                ? jaasJwtService.meetingUrl(roomName)
+                : "https://" + JITSI_DOMAIN + "/" + roomName;
+    }
+
+    private String externalApiUrl() {
+        return jaasJwtService.isEnabled() ? jaasJwtService.externalApiUrl() : JITSI_EXTERNAL_API_URL;
     }
 }

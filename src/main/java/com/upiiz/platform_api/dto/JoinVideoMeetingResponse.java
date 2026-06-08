@@ -14,5 +14,8 @@ public record JoinVideoMeetingResponse(
         String role,
         boolean host,
         boolean embedded,
-        String appPath
+        String appPath,
+        String jwt,
+        String externalApiUrl,
+        String appId
 ) {}
