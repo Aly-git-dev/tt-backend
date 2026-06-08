@@ -4,6 +4,7 @@ import com.upiiz.platform_api.dto.ApiResponse;
 import com.upiiz.platform_api.dto.CreateTeacherEvaluationRequest;
 import com.upiiz.platform_api.dto.CreateTopicDifficultyEventRequest;
 import com.upiiz.platform_api.dto.CreateTopicInterestEventRequest;
+import com.upiiz.platform_api.dto.UserSearchResponse;
 import com.upiiz.platform_api.entities.TeacherEvaluation;
 import com.upiiz.platform_api.entities.TopicDifficultyEvent;
 import com.upiiz.platform_api.entities.TopicInterestEvent;
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/upiiz/private/v1/analytics")
@@ -34,6 +37,16 @@ public class AnalyticsInteractionController {
         TeacherEvaluation saved = analyticsService.createTeacherEvaluation(request);
         return ResponseEntity.ok(
                 ApiResponse.success("Evaluación docente registrada correctamente", saved)
+        );
+    }
+
+    @GetMapping({"/teachers/search", "/teacher-evaluations/teachers/search"})
+    @Operation(summary = "Buscar docentes", description = "Busca docentes activos para registrar evaluaciones.")
+    public ResponseEntity<ApiResponse<List<UserSearchResponse>>> searchTeachers(
+            @RequestParam(required = false, defaultValue = "") String q
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Docentes encontrados correctamente", analyticsService.searchTeachers(q))
         );
     }
 

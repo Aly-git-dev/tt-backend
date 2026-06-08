@@ -1,6 +1,7 @@
 package com.upiiz.platform_api.controller;
 
 import com.upiiz.platform_api.dto.ApiResponse;
+import com.upiiz.platform_api.dto.UserSearchResponse;
 import com.upiiz.platform_api.repositories.AnalyticsModerationSummaryProjection;
 import com.upiiz.platform_api.repositories.AdminTopicDifficultyProjection;
 import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
@@ -69,6 +70,16 @@ public class AnalyticsAdminController {
                         "Desempeño docente obtenido correctamente",
                         analyticsService.getTeacherPerformance()
                 )
+        );
+    }
+
+    @GetMapping("/teachers/search")
+    @Operation(summary = "Buscar docentes", description = "Busca docentes activos por nombre o correo.")
+    public ResponseEntity<ApiResponse<List<UserSearchResponse>>> searchTeachers(
+            @RequestParam(required = false, defaultValue = "") String q
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Docentes encontrados correctamente", analyticsService.searchTeachers(q))
         );
     }
 

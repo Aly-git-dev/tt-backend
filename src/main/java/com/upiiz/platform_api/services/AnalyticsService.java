@@ -3,6 +3,7 @@ package com.upiiz.platform_api.services;
 import com.upiiz.platform_api.dto.CreateTeacherEvaluationRequest;
 import com.upiiz.platform_api.dto.CreateTopicDifficultyEventRequest;
 import com.upiiz.platform_api.dto.CreateTopicInterestEventRequest;
+import com.upiiz.platform_api.dto.UserSearchResponse;
 import com.upiiz.platform_api.entities.TeacherEvaluation;
 import com.upiiz.platform_api.entities.TopicDifficultyEvent;
 import com.upiiz.platform_api.entities.TopicInterestEvent;
@@ -11,11 +12,13 @@ import com.upiiz.platform_api.repositories.AnalyticsQueryRepo;
 import com.upiiz.platform_api.repositories.TeacherEvaluationRepo;
 import com.upiiz.platform_api.repositories.TopicDifficultyEventRepo;
 import com.upiiz.platform_api.repositories.TopicInterestEventRepo;
+import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.repositories.AnalyticsModerationSummaryProjection;
 import com.upiiz.platform_api.repositories.AdminTopicDifficultyProjection;
 import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
 import com.upiiz.platform_api.repositories.TeacherImprovementAreaProjection;
 import com.upiiz.platform_api.repositories.TeacherPerformanceProjection;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,17 +32,20 @@ public class AnalyticsService {
     private final TopicInterestEventRepo topicInterestEventRepo;
     private final TopicDifficultyEventRepo topicDifficultyEventRepo;
     private final AnalyticsQueryRepo analyticsQueryRepo;
+    private final UserRepository userRepo;
 
     public AnalyticsService(
             TeacherEvaluationRepo teacherEvaluationRepo,
             TopicInterestEventRepo topicInterestEventRepo,
             TopicDifficultyEventRepo topicDifficultyEventRepo,
-            AnalyticsQueryRepo analyticsQueryRepo
+            AnalyticsQueryRepo analyticsQueryRepo,
+            UserRepository userRepo
     ) {
         this.teacherEvaluationRepo = teacherEvaluationRepo;
         this.topicInterestEventRepo = topicInterestEventRepo;
         this.topicDifficultyEventRepo = topicDifficultyEventRepo;
         this.analyticsQueryRepo = analyticsQueryRepo;
+        this.userRepo = userRepo;
     }
 
     @Transactional
@@ -159,6 +165,16 @@ public class AnalyticsService {
         return analyticsQueryRepo.findTeacherImprovementAreasByTeacherId(teacherId);
     }
 
+    @Transactional(readOnly = true)
+    public List<UserSearchResponse> searchTeachers(String query) {
+        String term = query == null ? "" : query.trim();
+        return userRepo
+                .searchActiveUsersByRoles(term, List.of("PROFESOR"), PageRequest.of(0, 20))
+                .stream()
+                .map(this::mapUserSearchResponse)
+                .toList();
+    }
+
     private void validateTeacherEvaluation(CreateTeacherEvaluationRequest req) {
         if (req.getTeacherId() == null) {
             throw new IllegalArgumentException("teacherId es obligatorio");
@@ -168,5 +184,13 @@ public class AnalyticsService {
         TeacherEvaluationRating.validate(req.getRatingKnowledge(), "ratingKnowledge");
         TeacherEvaluationRating.validate(req.getRatingSupport(), "ratingSupport");
         TeacherEvaluationRating.validate(req.getRatingPunctuality(), "ratingPunctuality");
+    }
+
+    private UserSearchResponse mapUserSearchResponse(Object[] row) {
+        UserSearchResponse response = new UserSearchResponse();
+        response.id = (UUID) row[0];
+        response.email = (String) row[1];
+        response.name = (String) row[2];
+        return response;
     }
 }
