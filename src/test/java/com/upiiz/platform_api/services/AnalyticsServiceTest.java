@@ -26,7 +26,8 @@ class AnalyticsServiceTest {
 
     @Test
     void searchTeachersUsesProfesorRoleAndMapsResponse() {
-        AnalyticsService service = new AnalyticsService(null, null, null, null, userRepo);
+        UserSearchService userSearchService = new UserSearchService(userRepo);
+        AnalyticsService service = new AnalyticsService(null, null, null, null, userSearchService);
         UUID teacherId = UUID.randomUUID();
         when(userRepo.searchActiveUsersByRoles(eq("Ada"), eq(List.of("PROFESOR")), any(Pageable.class)))
                 .thenReturn(List.<Object[]>of(new Object[]{teacherId, "ada@ipn.mx", "Ada Lovelace"}));

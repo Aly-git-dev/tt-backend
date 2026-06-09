@@ -12,13 +12,11 @@ import com.upiiz.platform_api.repositories.AnalyticsQueryRepo;
 import com.upiiz.platform_api.repositories.TeacherEvaluationRepo;
 import com.upiiz.platform_api.repositories.TopicDifficultyEventRepo;
 import com.upiiz.platform_api.repositories.TopicInterestEventRepo;
-import com.upiiz.platform_api.repositories.UserRepository;
 import com.upiiz.platform_api.repositories.AnalyticsModerationSummaryProjection;
 import com.upiiz.platform_api.repositories.AdminTopicDifficultyProjection;
 import com.upiiz.platform_api.repositories.AdminTopicInterestProjection;
 import com.upiiz.platform_api.repositories.TeacherImprovementAreaProjection;
 import com.upiiz.platform_api.repositories.TeacherPerformanceProjection;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,20 +30,20 @@ public class AnalyticsService {
     private final TopicInterestEventRepo topicInterestEventRepo;
     private final TopicDifficultyEventRepo topicDifficultyEventRepo;
     private final AnalyticsQueryRepo analyticsQueryRepo;
-    private final UserRepository userRepo;
+    private final UserSearchService userSearchService;
 
     public AnalyticsService(
             TeacherEvaluationRepo teacherEvaluationRepo,
             TopicInterestEventRepo topicInterestEventRepo,
             TopicDifficultyEventRepo topicDifficultyEventRepo,
             AnalyticsQueryRepo analyticsQueryRepo,
-            UserRepository userRepo
+            UserSearchService userSearchService
     ) {
         this.teacherEvaluationRepo = teacherEvaluationRepo;
         this.topicInterestEventRepo = topicInterestEventRepo;
         this.topicDifficultyEventRepo = topicDifficultyEventRepo;
         this.analyticsQueryRepo = analyticsQueryRepo;
-        this.userRepo = userRepo;
+        this.userSearchService = userSearchService;
     }
 
     @Transactional
@@ -167,12 +165,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<UserSearchResponse> searchTeachers(String query) {
-        String term = query == null ? "" : query.trim();
-        return userRepo
-                .searchActiveUsersByRoles(term, List.of("PROFESOR"), PageRequest.of(0, 20))
-                .stream()
-                .map(this::mapUserSearchResponse)
-                .toList();
+        return userSearchService.searchTeachers(query);
     }
 
     private void validateTeacherEvaluation(CreateTeacherEvaluationRequest req) {
@@ -186,11 +179,4 @@ public class AnalyticsService {
         TeacherEvaluationRating.validate(req.getRatingPunctuality(), "ratingPunctuality");
     }
 
-    private UserSearchResponse mapUserSearchResponse(Object[] row) {
-        UserSearchResponse response = new UserSearchResponse();
-        response.id = (UUID) row[0];
-        response.email = (String) row[1];
-        response.name = (String) row[2];
-        return response;
-    }
 }

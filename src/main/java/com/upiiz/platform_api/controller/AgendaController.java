@@ -3,6 +3,9 @@ package com.upiiz.platform_api.controller;
 import com.upiiz.platform_api.services.AgendaService;
 import com.upiiz.platform_api.services.AgendaService.CreateAppointmentCmd;
 import com.upiiz.platform_api.services.AgendaService.RescheduleCmd;
+import com.upiiz.platform_api.services.UserSearchService;
+import com.upiiz.platform_api.dto.ApiResponse;
+import com.upiiz.platform_api.dto.UserSearchResponse;
 import com.upiiz.platform_api.entities.Appointment;
 import com.upiiz.platform_api.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,9 +25,11 @@ import java.util.*;
 public class AgendaController {
 
     private final AgendaService agendaService;
+    private final UserSearchService userSearchService;
 
-    public AgendaController(AgendaService agendaService) {
+    public AgendaController(AgendaService agendaService, UserSearchService userSearchService) {
         this.agendaService = agendaService;
+        this.userSearchService = userSearchService;
     }
 
     @GetMapping()
@@ -50,6 +55,16 @@ public class AgendaController {
     public Appointment create(@RequestBody CreateAppointmentCmd cmd) {
         UUID userId = CurrentUser.id();
         return agendaService.create(userId, cmd);
+    }
+
+    @GetMapping("/teachers/search")
+    @Operation(summary = "Buscar docentes", description = "Busca docentes activos por nombre o correo para crear citas.")
+    public ResponseEntity<ApiResponse<List<UserSearchResponse>>> searchTeachers(
+            @RequestParam(required = false, defaultValue = "") String q
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Docentes encontrados correctamente", userSearchService.searchTeachers(q))
+        );
     }
 
     @PutMapping("/appointments/{id}")
