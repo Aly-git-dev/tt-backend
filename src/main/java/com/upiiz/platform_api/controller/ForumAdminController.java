@@ -46,25 +46,25 @@ public class ForumAdminController {
     // Resolver un reporte
     @PostMapping("/reports/{id}/resolve")
     @Operation(summary = "Resolver reporte de foro", description = "Aplica la accion administrativa configurada y marca el reporte como resuelto.")
-    public void resolveReport(
+    public AdminReportDto resolveReport(
             @PathVariable Long id,
-            @RequestBody ReportAdminActionDto dto,
+            @RequestBody(required = false) ReportAdminActionDto dto,
             Principal principal
     ) {
         // asumimos que principal.getName() = email_inst del admin (igual que en el resto del sistema)
         String adminEmail = principal.getName();
-        forumService.resolveReport(id, dto, adminEmail);
+        return forumService.resolveReport(id, dto, adminEmail);
     }
 
     @PostMapping("/reports/{id}/dismiss")
     @Operation(summary = "Desestimar reporte de foro", description = "Marca un reporte de foro como desestimado sin ocultar contenido ni banear usuarios.")
-    public void dismissReport(
+    public AdminReportDto dismissReport(
             @PathVariable Long id,
             @RequestBody(required = false) ReportAdminActionDto dto,
             Principal principal
     ) {
         String adminEmail = principal.getName();
-        forumService.dismissReport(id, dto, adminEmail);
+        return forumService.dismissReport(id, dto, adminEmail);
     }
 
     // GET /upiiz/api/v1/admin/users/banned

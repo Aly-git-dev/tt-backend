@@ -601,7 +601,7 @@ public class ForumService {
     }
 
     @Transactional
-    public void resolveReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
+    public AdminReportDto resolveReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
         User admin = findUserByEmail(adminEmail);
         ReportAdminActionDto action = actionDto == null ? new ReportAdminActionDto() : actionDto;
 
@@ -657,11 +657,12 @@ public class ForumService {
             notificationService.notifyForumReportResolved(reportedUser.getId());
         }
 
-        reportRepo.save(report);
+        ForumReport saved = reportRepo.save(report);
+        return mapReportToAdminDto(saved);
     }
 
     @Transactional
-    public void dismissReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
+    public AdminReportDto dismissReport(Long reportId, ReportAdminActionDto actionDto, String adminEmail) {
         User admin = findUserByEmail(adminEmail);
 
         ForumReport report = reportRepo.findById(reportId)
@@ -675,7 +676,8 @@ public class ForumService {
             report.setDescription(actionDto.getAdminNote());
         }
 
-        reportRepo.save(report);
+        ForumReport saved = reportRepo.save(report);
+        return mapReportToAdminDto(saved);
     }
 
     private User findUserByEmail(String email) {
