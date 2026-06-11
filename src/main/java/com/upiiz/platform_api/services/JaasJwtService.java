@@ -20,6 +20,8 @@ import java.util.Map;
 @Service
 public class JaasJwtService {
 
+    private static final long MAX_TOKEN_TTL_MINUTES = 120;
+
     private final boolean enabled;
     private final String domain;
     private final String appId;
@@ -44,7 +46,7 @@ public class JaasJwtService {
         this.appId = normalize(appId, "");
         this.keyId = normalize(keyId, "");
         this.privateKeyValue = privateKeyValue == null ? "" : privateKeyValue.trim();
-        this.tokenTtlMinutes = Math.min(Math.max(tokenTtlMinutes, 1), 24 * 60);
+        this.tokenTtlMinutes = Math.min(Math.max(tokenTtlMinutes, 1), MAX_TOKEN_TTL_MINUTES);
         this.publicBaseUrl = stripTrailingSlash(normalize(publicBaseUrl, ""));
     }
 

@@ -36,6 +36,12 @@ services:
 
       APP_API_URL: https://api.kalypi.xyz
       APP_FRONTEND_URL: https://app.kalypi.xyz
+      JAAS_ENABLED: ${JAAS_ENABLED:-true}
+      JAAS_DOMAIN: ${JAAS_DOMAIN:-8x8.vc}
+      JAAS_APP_ID: ${JAAS_APP_ID:?Configura JAAS_APP_ID para videollamadas embebidas}
+      JAAS_KEY_ID: ${JAAS_KEY_ID:?Configura JAAS_KEY_ID para videollamadas embebidas}
+      JAAS_PRIVATE_KEY: ${JAAS_PRIVATE_KEY:?Configura JAAS_PRIVATE_KEY para videollamadas embebidas}
+      JAAS_TOKEN_TTL_MIN: ${JAAS_TOKEN_TTL_MIN:-120}
       SPRING_PROFILES_ACTIVE: prod
     ports:
       - "8080:8080"

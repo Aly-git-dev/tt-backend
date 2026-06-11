@@ -21,6 +21,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,8 +31,10 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,7 +63,7 @@ class VideoMeetingServiceTest {
     private JaasJwtService jaasJwtService;
 
     @Test
-    void joinUsesAuthenticatedUserProfileAndEmbeddedPayload() {
+    void joinRejectsEmbeddedDemoFallbackWhenJaasIsDisabled() {
         UUID hostId = UUID.randomUUID();
         Appointment appointment = onlineAppointment(hostId);
         VideoMeeting meeting = VideoMeeting.create(
@@ -69,36 +73,22 @@ class VideoMeetingServiceTest {
                 "upiiz-room",
                 "https://meet.jit.si/upiiz-room"
         );
-        User host = User.builder()
-                .id(hostId)
-                .nombre("Ana Lopez")
-                .avatarUrl("/profiles/ana.png")
-                .build();
 
         when(videoMeetingRepo.findById(meeting.getId())).thenReturn(Optional.of(meeting));
         when(appointmentRepo.findById(appointment.getId())).thenReturn(Optional.of(appointment));
         when(appointmentParticipantRepo.existsByAppointment_IdAndUserId(appointment.getId(), hostId))
                 .thenReturn(true);
-        when(videoMeetingRepo.save(any(VideoMeeting.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userRepository.findById(hostId)).thenReturn(Optional.of(host));
-        when(videoMeetingAttendanceRepo.save(any(VideoMeetingAttendance.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         VideoMeetingService service = service();
 
-        JoinVideoMeetingResponse response = service.join(meeting.getId(), hostId, "Chrome");
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.join(meeting.getId(), hostId, "Chrome")
+        );
 
-        assertEquals("Ana Lopez", response.displayName());
-        assertEquals("/profiles/ana.png", response.avatarUrl());
-        assertEquals(hostId, response.userId());
-        assertEquals(VideoMeetingRole.HOST.name(), response.role());
-        assertTrue(response.host());
-        assertTrue(response.embedded());
-        assertEquals("/video-meetings/" + meeting.getId() + "/room", response.appPath());
-        assertEquals("meet.jit.si", response.domain());
-        assertEquals("upiiz-room", response.roomName());
-        assertEquals("https://meet.jit.si/external_api.js", response.externalApiUrl());
-        assertEquals(VideoMeetingStatus.LIVE, meeting.getStatus());
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+        assertEquals(VideoMeetingStatus.SCHEDULED, meeting.getStatus());
+        verify(videoMeetingRepo, never()).save(any(VideoMeeting.class));
     }
 
     @Test
@@ -141,6 +131,11 @@ class VideoMeetingServiceTest {
         assertEquals("8x8.vc", response.domain());
         assertEquals("vpaas-magic-cookie-test/upiiz-room", response.roomName());
         assertEquals("https://8x8.vc/vpaas-magic-cookie-test/upiiz-room", response.meetingUrl());
+        assertEquals("Ana Lopez", response.displayName());
+        assertEquals("/profiles/ana.png", response.avatarUrl());
+        assertEquals(hostId, response.userId());
+        assertEquals(VideoMeetingRole.HOST.name(), response.role());
+        assertEquals("/video-meetings/" + meeting.getId() + "/room", response.appPath());
         assertEquals("https://8x8.vc/vpaas-magic-cookie-test/external_api.js", response.externalApiUrl());
         assertEquals("vpaas-magic-cookie-test", response.appId());
         assertEquals("jaas.jwt", response.jwt());
@@ -158,7 +153,7 @@ class VideoMeetingServiceTest {
                 hostId,
                 hostId,
                 "upiiz-room",
-                "https://meet.jit.si/upiiz-room"
+                "https://8x8.vc/vpaas-magic-cookie-test/upiiz-room"
         );
         meeting.markLive();
 

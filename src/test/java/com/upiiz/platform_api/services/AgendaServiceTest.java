@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +67,28 @@ class AgendaServiceTest {
         verify(appointmentRepo).save(appointmentCaptor.capture());
         verify(reminderService).scheduleForAppointment(appointmentCaptor.getValue());
         verify(notificationService).notifyInvitees(appointmentCaptor.getValue());
+    }
+
+    @Test
+    void createRejectsAppointmentsLongerThanTwoHours() {
+        AgendaService service = new AgendaService(appointmentRepo, reminderService, notificationService);
+        UUID host = UUID.randomUUID();
+        LocalDateTime startsAt = LocalDateTime.now().plusDays(1);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.create(
+                host,
+                new AgendaService.CreateAppointmentCmd(
+                        "Asesoria",
+                        "Revision de avance",
+                        Modality.ONLINE,
+                        startsAt,
+                        startsAt.plusHours(2).plusMinutes(1),
+                        List.of()
+                )
+        ));
+
+        assertEquals("La cita no puede durar mas de 2 horas", ex.getMessage());
+        verify(appointmentRepo, never()).save(any(Appointment.class));
     }
 
     @Test

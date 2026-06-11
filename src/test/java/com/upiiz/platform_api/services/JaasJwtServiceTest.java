@@ -63,6 +63,31 @@ class JaasJwtServiceTest {
         assertTrue(((Number) payload.get("exp")).longValue() > ((Number) payload.get("nbf")).longValue());
     }
 
+    @Test
+    void clampsTokenTtlToTwoHours() throws Exception {
+        JaasJwtService service = new JaasJwtService(
+                true,
+                "8x8.vc",
+                "vpaas-magic-cookie-test",
+                "key123",
+                privateKeyPem(),
+                999,
+                "https://api.example/"
+        );
+        service.init();
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .emailInst("ana@alumno.ipn.mx")
+                .nombre("Ana Lopez")
+                .build();
+
+        Map<String, Object> payload = part(service.createToken(user, true, "room-1"), 1);
+        long validSeconds = ((Number) payload.get("exp")).longValue() - ((Number) payload.get("nbf")).longValue();
+
+        assertTrue(validSeconds >= 120 * 60);
+        assertTrue(validSeconds <= 121 * 60);
+    }
+
     private String privateKeyPem() throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048);

@@ -5,12 +5,15 @@ import com.upiiz.platform_api.models.*;
 import jakarta.persistence.*;
 import lombok.Getter;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
 @Table(name = "appointments")
 public class Appointment {
+
+    public static final Duration MAX_DURATION = Duration.ofHours(2);
 
     @Id
     private UUID id;
@@ -53,6 +56,8 @@ public class Appointment {
 
     public static Appointment create(UUID creatorId, String title, String description, Modality modality,
                                      LocalDateTime startsAt, LocalDateTime endsAt) {
+        validateSchedule(startsAt, endsAt);
+
         Appointment a = new Appointment();
         a.id = UUID.randomUUID();
         a.createdBy = creatorId;
@@ -77,6 +82,8 @@ public class Appointment {
     }
 
     public void reschedule(LocalDateTime startsAt, LocalDateTime endsAt) {
+        validateSchedule(startsAt, endsAt);
+
         this.startsAt = startsAt;
         this.endsAt = endsAt;
         this.updatedAt = LocalDateTime.now();
@@ -90,6 +97,16 @@ public class Appointment {
     public void complete() {
         this.status = AppointmentStatus.COMPLETED;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public static void validateSchedule(LocalDateTime startsAt, LocalDateTime endsAt) {
+        if (startsAt == null || endsAt == null || !endsAt.isAfter(startsAt)) {
+            throw new IllegalArgumentException("Invalid time range");
+        }
+
+        if (Duration.between(startsAt, endsAt).compareTo(MAX_DURATION) > 0) {
+            throw new IllegalArgumentException("La cita no puede durar mas de 2 horas");
+        }
     }
 
     // getters (o Lombok si usas)

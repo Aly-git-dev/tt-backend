@@ -82,7 +82,7 @@ public class AgendaService {
     }
 
     private void validateTimes(LocalDateTime start, LocalDateTime end) {
-        if (start == null || end == null || !end.isAfter(start)) throw new RuntimeException("Invalid time range");
+        Appointment.validateSchedule(start, end);
     }
 
     private void ensureEditable(Appointment a) {
