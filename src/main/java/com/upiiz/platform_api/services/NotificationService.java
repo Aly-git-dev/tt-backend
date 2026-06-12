@@ -161,7 +161,7 @@ public class NotificationService {
                     "/assets/icons/icon-192x192.png",
                     url
             ));
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
             System.err.println("No se pudo enviar push al navegador: " + e.getMessage());
         }
     }
