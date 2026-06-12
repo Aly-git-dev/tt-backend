@@ -225,7 +225,22 @@ public class ForumService {
 
     @Transactional
     public PostDto createPost(Long threadId, PostCreateDto dto, String userEmail) {
+        return createPostInternal(threadId, dto, userEmail, false);
+    }
+
+    private PostDto createPostInternal(Long threadId, PostCreateDto dto, String userEmail, boolean allowEmptyBody) {
         User author = findUserByEmail(userEmail);
+
+        if (dto == null) {
+            throw new IllegalArgumentException("Debes enviar el contenido de la respuesta");
+        }
+
+        String body = dto.getBody() == null ? "" : dto.getBody().trim();
+        boolean hasAttachmentReferences = dto.getAttachments() != null && !dto.getAttachments().isEmpty();
+
+        if (body.isEmpty() && !allowEmptyBody && !hasAttachmentReferences) {
+            throw new IllegalArgumentException("Debes enviar el contenido de la respuesta");
+        }
 
         ForumThread thread = threadRepo.findById(threadId)
                 .orElseThrow(() -> new IllegalArgumentException("Hilo no encontrado"));
@@ -248,7 +263,7 @@ public class ForumService {
                 .thread(thread)
                 .author(author)
                 .parent(parent)
-                .body(dto.getBody().trim())
+                .body(body)
                 .score(0)
                 .acceptedAnswer(false)
                 .status(PostStatus.VISIBLE)
@@ -291,7 +306,8 @@ public class ForumService {
             String userEmail,
             List<MultipartFile> files
     ) throws IOException {
-        PostDto created = createPost(threadId, dto, userEmail);
+        boolean allowEmptyBody = hasFiles(files);
+        PostDto created = createPostInternal(threadId, dto, userEmail, allowEmptyBody);
         if (hasFiles(files)) {
             return addPostAttachments(created.getId(), files, userEmail);
         }

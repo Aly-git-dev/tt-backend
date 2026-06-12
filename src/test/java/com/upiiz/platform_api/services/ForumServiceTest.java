@@ -1,10 +1,14 @@
 package com.upiiz.platform_api.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.upiiz.platform_api.dto.PostCreateDto;
 import com.upiiz.platform_api.dto.ReportAdminActionDto;
+import com.upiiz.platform_api.entities.ForumPost;
 import com.upiiz.platform_api.entities.ForumReport;
 import com.upiiz.platform_api.entities.ForumThread;
 import com.upiiz.platform_api.entities.User;
 import com.upiiz.platform_api.models.ForumStatus;
+import com.upiiz.platform_api.models.PostStatus;
 import com.upiiz.platform_api.models.ReportStatus;
 import com.upiiz.platform_api.repositories.ForumAttachmentRepository;
 import com.upiiz.platform_api.repositories.ForumCategoryRepository;
@@ -26,7 +30,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,21 +53,80 @@ class ForumServiceTest {
     @Mock private ForumFileStorage forumFileStorage;
 
     @Test
-    void resolveThreadReportCanCloseThreadAndReturnsUpdatedReport() {
-        ForumService service = new ForumService(
-                categoryRepo,
-                subareaRepo,
-                threadRepo,
-                postRepo,
-                attachmentRepo,
-                reportRepo,
-                userRepo,
-                interestRepo,
-                threadVoteRepo,
-                postVoteRepo,
-                notificationService,
-                forumFileStorage
+    void postCreateDtoAcceptsContentAlias() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
+        PostCreateDto dto = mapper.readValue("{\"content\":\"Respuesta desde frontend\"}", PostCreateDto.class);
+
+        assertEquals("Respuesta desde frontend", dto.getBody());
+    }
+
+    @Test
+    void createPostRejectsMissingBodyBeforeSaving() {
+        ForumService service = newService();
+
+        User author = User.builder()
+                .id(UUID.randomUUID())
+                .emailInst("author@ipn.mx")
+                .nombre("Author")
+                .active(true)
+                .build();
+
+        when(userRepo.findByEmailInst("author@ipn.mx")).thenReturn(Optional.of(author));
+
+        PostCreateDto dto = new PostCreateDto();
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createPost(10L, dto, "author@ipn.mx")
         );
+
+        assertEquals("Debes enviar el contenido de la respuesta", ex.getMessage());
+        verify(threadRepo, never()).findById(any());
+        verify(postRepo, never()).save(any());
+    }
+
+    @Test
+    void createPostTrimsContentAliasBodyAndSavesPost() {
+        ForumService service = newService();
+
+        User author = User.builder()
+                .id(UUID.randomUUID())
+                .emailInst("author@ipn.mx")
+                .nombre("Author")
+                .active(true)
+                .build();
+        ForumThread thread = ForumThread.builder()
+                .id(10L)
+                .author(author)
+                .status(ForumStatus.ABIERTO)
+                .answersCount(0)
+                .build();
+        PostCreateDto dto = new PostCreateDto();
+        dto.setBody("  Respuesta valida  ");
+
+        when(userRepo.findByEmailInst("author@ipn.mx")).thenReturn(Optional.of(author));
+        when(threadRepo.findById(10L)).thenReturn(Optional.of(thread));
+        when(postRepo.save(any(ForumPost.class))).thenAnswer(invocation -> {
+            ForumPost post = invocation.getArgument(0);
+            post.setId(30L);
+            post.setStatus(PostStatus.VISIBLE);
+            return post;
+        });
+        when(threadRepo.save(any(ForumThread.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(attachmentRepo.findByPostId(30L)).thenReturn(java.util.List.of());
+        when(postVoteRepo.findByUserAndPost(any(User.class), any(ForumPost.class))).thenReturn(Optional.empty());
+
+        var result = service.createPost(10L, dto, "author@ipn.mx");
+
+        assertEquals("Respuesta valida", result.getBody());
+        assertEquals(1, thread.getAnswersCount());
+        verify(postRepo).save(any(ForumPost.class));
+    }
+
+    @Test
+    void resolveThreadReportCanCloseThreadAndReturnsUpdatedReport() {
+        ForumService service = newService();
         User admin = User.builder()
                 .id(UUID.randomUUID())
                 .emailInst("admin@ipn.mx")
@@ -110,5 +175,22 @@ class ForumServiceTest {
         assertEquals("Admin", result.getHandledByName());
         verify(threadRepo).save(thread);
         verify(notificationService).notifyForumReportResolved(author.getId());
+    }
+
+    private ForumService newService() {
+        return new ForumService(
+                categoryRepo,
+                subareaRepo,
+                threadRepo,
+                postRepo,
+                attachmentRepo,
+                reportRepo,
+                userRepo,
+                interestRepo,
+                threadVoteRepo,
+                postVoteRepo,
+                notificationService,
+                forumFileStorage
+        );
     }
 }
